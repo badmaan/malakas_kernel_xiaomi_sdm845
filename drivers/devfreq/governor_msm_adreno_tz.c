@@ -456,8 +456,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 	priv->bin.total_time += stats.total_time;
 #if 1
 	// scale busy time up based on adrenoboost parameter, only if MIN_BUSY exceeded...
-//	if ((unsigned int)(priv->bin.busy_time + stats.busy_time) >= MIN_BUSY && adrenoboost) {
-	if (adrenoboost) {
+	if ((unsigned int)(priv->bin.busy_time + stats.busy_time) >= MIN_BUSY && adrenoboost) {
 		if (adrenoboost == 1) {
 			priv->bin.busy_time += (unsigned int)((stats.busy_time * ( 1 + adrenoboost ) * lvl_multiplicator_map_1[ last_level ]) / lvl_divider_map_1[ last_level ]);
 		} else
@@ -500,11 +499,6 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 		priv->bin.last_level = level;
 	}
 
-	// idle freq or any non governor drop should move last_level as well, so adrenoboost works on proper leveling
-	if (level != priv->bin.last_level) {
-		priv->bin.last_level = level;
-	}
-
 	/*
 	 * If there is an extended block of busy processing,
 	 * increase frequency.  Otherwise run the normal algorithm.
@@ -542,11 +536,9 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 			priv->bin.cycles_keeping_level += 1 + abs(val/2); // higher value change quantity means more addition to cycles_keeping_level for easier switching
 			// going upwards in frequency -- make it harder on the low and high freqs, middle ground - let it move
 			if (val<0 && priv->bin.cycles_keeping_level < conservation_map_up[ last_level ]) {
-				printk("%s ADRENO not jumping UP level = %d last_level = %d total=%d busy=%d original busy_time=%d \n", __func__, level, priv->bin.last_level, (int)priv->bin.total_time, (int)priv->bin.busy_time, (int)stats.busy_time);
 			} else
 			// going downwards in frequency let it happen hard in the middle freqs
 			if (val>0 && priv->bin.cycles_keeping_level < conservation_map_down[ last_level ])  {
-				printk("%s ADRENO not jumping DOWN level = %d last_level = %d total=%d busy=%d original busy_time=%d \n", __func__, level, priv->bin.last_level, (int)priv->bin.total_time, (int)priv->bin.busy_time, (int)stats.busy_time);
 			} else
 			{
 				level += val;
