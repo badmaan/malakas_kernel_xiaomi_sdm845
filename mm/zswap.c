@@ -364,9 +364,10 @@ static int zswap_dstmem_prepare(unsigned int cpu)
 	u8 *dst;
 
 	dst = kmalloc_node(PAGE_SIZE * 2, GFP_KERNEL, cpu_to_node(cpu));
-	if (!dst)
+	if (!dst) {
+		pr_err("can't allocate compressor buffer\n");
 		return -ENOMEM;
-
+	}
 	per_cpu(zswap_dstmem, cpu) = dst;
 	return 0;
 }
@@ -382,9 +383,9 @@ static int zswap_dstmem_dead(unsigned int cpu)
 	return 0;
 }
 
-static int zswap_cpu_comp_prepare(unsigned int cpu, struct hlist_node *node)
+static int __zswap_cpu_comp_notifier(struct zswap_pool *pool,
+				     unsigned long action, unsigned long cpu)
 {
-	struct zswap_pool *pool = hlist_entry(node, struct zswap_pool, node);
 	struct crypto_comp *tfm;
 
 	if (WARN_ON(*per_cpu_ptr(pool->tfm, cpu)))
@@ -1143,7 +1144,7 @@ static int __init init_zswap(void)
 		pr_warn("debugfs initialization failed\n");
 	return 0;
 
-hp_fail:
+pool_fail:
 	cpuhp_remove_state(CPUHP_MM_ZSWP_MEM_PREPARE);
 dstmem_fail:
 	zswap_entry_cache_destroy();
