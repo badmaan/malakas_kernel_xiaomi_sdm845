@@ -383,9 +383,9 @@ static int zswap_dstmem_dead(unsigned int cpu)
 	return 0;
 }
 
-static int __zswap_cpu_comp_notifier(struct zswap_pool *pool,
-				     unsigned long action, unsigned long cpu)
+static int zswap_cpu_comp_prepare(unsigned int cpu, struct hlist_node *node)
 {
+	struct zswap_pool *pool = hlist_entry(node, struct zswap_pool, node);
 	struct crypto_comp *tfm;
 
 	if (WARN_ON(*per_cpu_ptr(pool->tfm, cpu)))
@@ -475,7 +475,7 @@ static struct zswap_pool *zswap_pool_create(char *type, char *compressor)
 {
 	struct zswap_pool *pool;
 	char name[38]; /* 'zswap' + 32 char (max) num + \0 */
-	gfp_t gfp = __GFP_NORETRY | __GFP_NOWARN | __GFP_KSWAPD_RECLAIM | __GFP_HIGHMEM | __GFP_MOVABLE;
+	gfp_t gfp = __GFP_NORETRY | __GFP_NOWARN | __GFP_KSWAPD_RECLAIM;
 	int ret;
 
 	if (!zswap_has_pool) {
@@ -1145,6 +1145,8 @@ static int __init init_zswap(void)
 	return 0;
 
 pool_fail:
+	cpuhp_remove_state_nocalls(CPUHP_MM_ZSWP_POOL_PREPARE);
+hp_fail:
 	cpuhp_remove_state(CPUHP_MM_ZSWP_MEM_PREPARE);
 dstmem_fail:
 	zswap_entry_cache_destroy();
