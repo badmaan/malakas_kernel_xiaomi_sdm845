@@ -224,8 +224,9 @@ static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 	if (!sg_policy->tunables->iowait_boost_enable)
 		return;
 
-	/* Clear iowait_boost if the CPU apprears to have been idle. */
-	if (sg_cpu->iowait_boost) {
+	if (flags & SCHED_CPUFREQ_IOWAIT) {
+		sg_cpu->iowait_boost = sg_cpu->iowait_boost_max;
+	} else if (sg_cpu->iowait_boost) {
 		s64 delta_ns = time - sg_cpu->last_update;
 
 		if (delta_ns > TICK_NSEC) {
