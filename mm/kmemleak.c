@@ -277,10 +277,7 @@ struct early_log {
 	int op_type;			/* kmemleak operation type */
 	int min_count;			/* minimum reference count */
 	const void *ptr;		/* allocated/freed memory block */
-	union {
-		size_t size;		/* memory block size */
-		unsigned long excess_ref; /* surplus reference passing */
-	};
+	size_t size;			/* memory block size */
 	unsigned long trace[MAX_TRACE];	/* stack trace */
 	unsigned int trace_len;		/* stack trace length */
 };
