@@ -277,7 +277,10 @@ struct early_log {
 	int op_type;			/* kmemleak operation type */
 	int min_count;			/* minimum reference count */
 	const void *ptr;		/* allocated/freed memory block */
-	size_t size;			/* memory block size */
+	union {
+		size_t size;		/* memory block size */
+		unsigned long excess_ref; /* surplus reference passing */
+	};
 	unsigned long trace[MAX_TRACE];	/* stack trace */
 	unsigned int trace_len;		/* stack trace length */
 };
@@ -1352,8 +1355,27 @@ static void scan_block(void *_start, void *_end,
 		 * enclosed by scan_mutex.
 		 */
 		spin_lock_nested(&object->lock, SINGLE_DEPTH_NESTING);
-		update_refs(object);
+		/* only pass surplus references (object already gray) */
+		if (color_gray(object)) {
+			excess_ref = object->excess_ref;
+			/* no need for update_refs() if object already gray */
+		} else {
+			excess_ref = 0;
+			update_refs(object);
+		}
 		spin_unlock(&object->lock);
+
+		if (excess_ref) {
+			object = lookup_object(excess_ref, 0);
+			if (!object)
+				continue;
+			if (object == scanned)
+				/* circular reference, ignore */
+				continue;
+			spin_lock_nested(&object->lock, SINGLE_DEPTH_NESTING);
+			update_refs(object);
+			spin_unlock(&object->lock);
+		}
 	}
 	read_unlock_irqrestore(&kmemleak_lock, flags);
 }
