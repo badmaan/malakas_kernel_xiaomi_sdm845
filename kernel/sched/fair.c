@@ -7364,18 +7364,13 @@ retry:
 				 */
 				if (idle_cpu(i)) {
 					if (boosted &&
-					    capacity_orig < target_capacity)
+					    capacity_orig <= target_capacity)
 						continue;
 					if (!boosted &&
-					    capacity_orig > target_capacity)
-						continue;
-					if (capacity_orig == target_capacity &&
-					    sysctl_sched_cstate_aware &&
-					    best_idle_cstate <= idle_idx)
+					    capacity_orig >= target_capacity)
 						continue;
 
 					target_capacity = capacity_orig;
-					best_idle_cstate = idle_idx;
 					best_idle_cpu = i;
 					continue;
 				}
@@ -7569,7 +7564,7 @@ retry:
 	if (prefer_idle && (best_idle_cpu != -1)) {
 		trace_sched_find_best_target(p, prefer_idle, min_util, cpu,
 					     best_idle_cpu, best_active_cpu,
-					     -1, best_idle_cpu, -1);
+					     -1, best_idle_cpu, -1, boosted); 
 
 		return best_idle_cpu;
 	}
