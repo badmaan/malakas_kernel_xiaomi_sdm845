@@ -155,6 +155,7 @@ static void close_pdeo(struct proc_dir_entry *pde, struct pde_opener *pdeo)
 		pde->proc_fops->release(file_inode(file), file);
 		spin_lock(&pde->pde_unload_lock);
 		list_del_init(&pdeo->lh);
+		list_del(&pdeo->lh);
 		c = pdeo->c;
 		spin_unlock(&pde->pde_unload_lock);
 		if (unlikely(c))
