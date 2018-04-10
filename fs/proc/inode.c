@@ -347,8 +347,7 @@ static int proc_reg_open(struct inode *inode, struct file *file)
 		if (rv == 0) {
 			/* To know what to release. */
 			pdeo->file = file;
-			pdeo->closing = false;
-			pdeo->c = NULL;
+			/* Strictly for "too late" ->release in proc_reg_release(). */
 			spin_lock(&pde->pde_unload_lock);
 			list_add(&pdeo->lh, &pde->pde_openers);
 			spin_unlock(&pde->pde_unload_lock);
