@@ -7278,11 +7278,8 @@ retry:
 		while ((i = cpumask_next(i, &search_cpus)) < nr_cpu_ids) {
 			unsigned long capacity_curr = capacity_curr_of(i);
 			unsigned long capacity_orig = capacity_orig_of(i);
-			unsigned long wake_util, new_util;
+			unsigned long wake_util, new_util, new_util_cuml;
 			long spare_cap;
-			int idle_idx = INT_MAX;
-
-			cpumask_clear_cpu(i, &search_cpus);
 
 			trace_sched_cpu_util(i);
 			if (!cpu_online(i) || cpu_isolated(i))
@@ -7326,10 +7323,6 @@ retry:
 			 * enqueued here.
 			 */
 			spare_cap = capacity_orig - new_util;
-
-			if (cpu_check_overutil_condition(i, new_util))
-				continue;
-
 
 			/*
 			 * Case A) Latency sensitive tasks
