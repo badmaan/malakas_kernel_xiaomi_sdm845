@@ -912,13 +912,11 @@ void fixup_busy_time(struct task_struct *p, int new_cpu)
 		irq_work_queue(&walt_migration_irq_work);
 	}
 
-	if (is_ed_enabled()) {
-		if (p == src_rq->ed_task) {
-			src_rq->ed_task = NULL;
-			dest_rq->ed_task = p;
-		} else if (is_ed_task(p, wallclock)) {
-			dest_rq->ed_task = p;
-		}
+	if (p == src_rq->ed_task) {
+		src_rq->ed_task = NULL;
+		dest_rq->ed_task = p;
+	} else if (is_ed_task(p, wallclock)) {
+		dest_rq->ed_task = p;
 	}
 
 done:
