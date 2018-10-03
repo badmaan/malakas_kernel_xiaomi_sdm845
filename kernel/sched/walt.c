@@ -392,7 +392,6 @@ bool early_detection_notify(struct rq *rq, u64 wallclock)
 	struct task_struct *p;
 	int loop_max = 10;
 
-
 	if (!is_ed_enabled() || !rq->cfs.h_nr_running)
 		return 0;
 
@@ -912,11 +911,13 @@ void fixup_busy_time(struct task_struct *p, int new_cpu)
 		irq_work_queue(&walt_migration_irq_work);
 	}
 
-	if (p == src_rq->ed_task) {
-		src_rq->ed_task = NULL;
-		dest_rq->ed_task = p;
-	} else if (is_ed_task(p, wallclock)) {
-		dest_rq->ed_task = p;
+	if (is_ed_enabled()) {
+		if (p == src_rq->ed_task) {
+			src_rq->ed_task = NULL;
+			dest_rq->ed_task = p;
+		} else if (is_ed_task(p, wallclock)) {
+			dest_rq->ed_task = p;
+		}
 	}
 
 done:
