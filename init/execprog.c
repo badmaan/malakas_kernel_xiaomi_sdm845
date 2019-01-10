@@ -11,8 +11,6 @@
  * a physical block device to execute a program just for your kernel.
  */
 
-#define pr_fmt(fmt) "execprog: " fmt
-
 #include <linux/buffer_head.h>
 #include <linux/delay.h>
 #include <linux/fs.h>
@@ -67,22 +65,22 @@ static void execprog_worker(struct work_struct *work)
 	u32 diff;
 	int ret;
 
-	pr_info("worker started\n");
+	pr_info("execprog: worker started\n");
 
 	if (wait_for[0]) {
-		pr_info("waiting for %s\n", wait_for);
+		pr_info("execprog: waiting for %s\n", wait_for);
 		while (kern_path(wait_for, LOOKUP_FOLLOW, &path))
 			msleep(DELAY_MS);
 	} else {
-		pr_info("no file specified to wait for\n");
+		pr_info("execprog: no file specified to wait for\n");
 	}
 
 	if (!save_to[0]) {
-		pr_err("no path specified for the binary to be saved!\n");
+		pr_err("execprog: no path specified for the binary to be saved!\n");
 		return;
 	}
 
-	pr_info("saving binary to userspace\n");
+	pr_info("execprog: saving binary to userspace\n");
 	file = file_open(save_to, O_CREAT | O_WRONLY | O_TRUNC, 0755);
 
 	while (pos < size) {
@@ -95,28 +93,21 @@ static void execprog_worker(struct work_struct *work)
 	filp_close(file, NULL);
 	vfree(data);
 
-	do {
-		/*
-		 * Wait for RCU grace period to end for the file to close properly.
-		 * call_usermodehelper() will return -ETXTBSY without this barrier.
-		 */
-		rcu_barrier();
-		msleep(10);
+	/*
+	 * Wait for RCU grace period to end for the file to close properly.
+	 * call_usermodehelper() will return -ETXTBUSY without this barrier.
+	 */
+	rcu_barrier();
 
-		ret = call_usermodehelper(argv[0], argv, NULL, UMH_WAIT_EXEC);
-	} while (ret == -ETXTBSY);
-
-	if (ret)
-		pr_err("execution failed with return code: %d\n", ret);
-	else
-		pr_info("execution finished\n");
+	pr_info("execprog: executing %s\n", argv[0]);
+	call_usermodehelper(argv[0], argv, NULL, UMH_WAIT_EXEC);
 }
 
 static int __init execprog_init(void)
 {
 	int i;
 
-	pr_info("copying static data\n");
+	pr_info("execprog: copying static data\n");
 
 	// Allocate memory
 	data = vmalloc(last_index * 4096);
@@ -127,7 +118,7 @@ static int __init execprog_init(void)
 	i = (last_index - 1);
 	memcpy(data + (i * 4096), *(primary + i), last_items);
 
-	pr_info("finished copying\n");
+	pr_info("execprog: finished copying\n");
 
 	INIT_DELAYED_WORK(&execprog_work, execprog_worker);
 	queue_delayed_work(system_freezable_power_efficient_wq,
