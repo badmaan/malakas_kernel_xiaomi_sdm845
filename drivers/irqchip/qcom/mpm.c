@@ -261,13 +261,19 @@ static void msm_mpm_gic_chip_disable(struct irq_data *d)
 	irq_chip_disable_parent(d);
 }
 
+static int msm_mpm_gic_chip_set_wake(struct irq_data *d, unsigned int on)
+{
+	msm_mpm_enable_irq(d, on);
+	return irq_chip_set_wake_parent(d, on);
+}
+
 static struct irq_chip msm_mpm_gic_chip = {
 	.name		= "mpm-gic",
 	.irq_eoi	= irq_chip_eoi_parent,
 	.irq_mask	= msm_mpm_gic_chip_mask,
 	.irq_disable	= msm_mpm_gic_chip_disable,
 	.irq_unmask	= msm_mpm_gic_chip_unmask,
-	.irq_enable	= msm_mpm_gic_chip_disable,
+	.irq_enable	= msm_mpm_gic_chip_enable,
 	.irq_retrigger	= irq_chip_retrigger_hierarchy,
 	.irq_set_type	= msm_mpm_gic_chip_set_type,
 	.irq_set_wake	= msm_mpm_gic_chip_set_wake,
