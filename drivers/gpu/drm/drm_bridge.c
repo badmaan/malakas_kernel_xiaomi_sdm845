@@ -326,10 +326,16 @@ void drm_bridge_pre_enable(struct drm_bridge *bridge)
 	drm_bridge_enable_all(bridge->dev);
 	kthread_flush_work(&bridge->dev->bridge_enable_work);
 }
-EXPORT_SYMBOL(drm_bridge_pre_enable);
 
-	if (bridge->funcs->pre_enable)
-		bridge->funcs->pre_enable(bridge);
+void __drm_bridge_enable(struct drm_bridge *bridge)
+{
+	if (!bridge)
+		return;
+
+	if (bridge->funcs->enable)
+		bridge->funcs->enable(bridge);
+
+	__drm_bridge_enable(bridge->next);
 }
 
 void drm_bridge_disp_param_set(struct drm_bridge *bridge, int cmd)
