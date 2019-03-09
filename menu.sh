@@ -1,4 +1,5 @@
 #!/bin/bash
+rm -rf out
 make kernelversion
 export ARCH=arm64 && export SUBARCH=arm64 beryllium_defconfig
 make beryllium_defconfig
