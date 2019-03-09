@@ -974,6 +974,8 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 	rc = smblib_request_dpdm(chg, true);
 	if (rc < 0)
 		smblib_err(chg, "Couldn't to enable DPDM rc=%d\n", rc);
+		if (chg->fcc_stepper_enable)
+			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
 	*/
 
 	chg->uusb_apsd_rerun_done = true;
