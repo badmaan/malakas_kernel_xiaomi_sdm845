@@ -1,0 +1,7 @@
+#!/bin/bash
+make kernelversion
+export ARCH=arm64 && export SUBARCH=arm64 beryllium_defconfig
+make beryllium_defconfig
+make menuconfig
+mv .config /arch/arm64/configs/malakas_defconfig
+
