@@ -272,6 +272,7 @@ static bool check_transfers_inflight(struct uart_port *uport)
 static void wait_for_transfers_inflight(struct uart_port *uport)
 {
 	int iter = 0;
+	bool ret = false;
 
 	while (iter < WAIT_XFER_MAX_ITER) {
 		if ((ret = check_transfers_inflight(uport))) {
@@ -282,6 +283,9 @@ static void wait_for_transfers_inflight(struct uart_port *uport)
 			break;
 		}
 	}
+
+	if (ret)
+		dev_err(uport->dev, "%s: timeout!\n", __func__);
 }
 
 static int vote_clock_on(struct uart_port *uport)
