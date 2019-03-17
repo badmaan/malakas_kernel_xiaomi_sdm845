@@ -7,6 +7,8 @@ export ARCH=arm64 && export SUBARCH=arm64 malakas_dipper_defconfig
 export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
 export CC=~/TOOLCHAIN/clang9/bin/clang 
 export CLANG_TRIPLE=~/TOOLCHAIN/sdclang/aarch64-linux-android
+export LD_LIBRARY_PATH=~/TOOLCHAIN/gcc/lib/gcc/aarch64-linux-gnu/8.2.1
+export PATH=/bin
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 export <OUT_DIR> =out
