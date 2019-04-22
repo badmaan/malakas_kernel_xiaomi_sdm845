@@ -1,18 +1,14 @@
 #!/bin/bash
-#git pull
 rm -rf /out
 make kernelversion
 export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
-export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu- -flto
-export CC=~/TOOLCHAIN/dtc/bin/clang -flto
-export CLANG_TRIPLE=~/TOOLCHAIN/dtc/aarch64-linux-android -flto
-export LD_LIBRARY_PATH=~/TOOLCHAIN/gcc/lib/
+export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu- 
+export CC=~/TOOLCHAIN/dtc/bin/clang 
+export CLANG_TRIPLE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
+export LD_LIBRARY_PATH=~/TOOLCHAIN/gcc/lib/gcc/aarch64-linux-gnu/8.3.0/
 export PATH=/bin/
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
-export <OUT_DIR> =out
-#make b_defconfig
-#make menuconfig
 mkdir -p out
 make O=out clean
 make O=out malakas_beryllium_defconfig
