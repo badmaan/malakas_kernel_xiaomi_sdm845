@@ -7307,7 +7307,8 @@ retry:
 			 * than the one required to boost the task.
 			 */
 			new_util = max(min_util, new_util);
-			if (new_util > capacity_orig)
+
+			if (cpu_check_overutil_condition(i, new_util))
 				continue;
 
 			/*
