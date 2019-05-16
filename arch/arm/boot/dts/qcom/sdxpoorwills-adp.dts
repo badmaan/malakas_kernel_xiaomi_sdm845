@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,9 +10,13 @@
  * GNU General Public License for more details.
  */
 
-#include "sdm439-qrd.dtsi"
-#include "sdm429w-pm660.dtsi"
+/dts-v1/;
 
-&mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_hx8399c_hd_vid>;
+#include "sdxpoorwills-adp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SDXPOORWILLS ADP";
+	compatible = "qcom,sdxpoorwills-adp",
+		"qcom,sdxpoorwills", "qcom,adp";
+	qcom,board-id = <25 0>, <25 0x100>;
 };
