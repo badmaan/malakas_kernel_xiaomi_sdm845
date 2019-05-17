@@ -44,6 +44,12 @@ const char * const mem_sleep_labels[] = {
 	[PM_SUSPEND_MEM] = "deep",
 };
 const char *mem_sleep_states[PM_SUSPEND_MAX];
+#include <linux/gpio.h>
+extern int slst_gpio_base_id;
+#define PROC_AWAKE_ID 12 /* 12th bit */
+
+const char *pm_labels[] = { "mem", "standby", "freeze", NULL };
+const char *pm_states[PM_SUSPEND_MAX];
 
 suspend_state_t mem_sleep_current = PM_SUSPEND_FREEZE;
 static suspend_state_t mem_sleep_default = PM_SUSPEND_MEM;
@@ -582,8 +588,10 @@ int pm_suspend(suspend_state_t state)
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
 		return -EINVAL;
 
+	gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 0);
 	pm_suspend_marker("entry");
 	error = enter_state(state);
+	gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 1);
 	if (error) {
 		suspend_stats.fail++;
 		dpm_save_failed_errno(error);
