@@ -7,7 +7,7 @@ export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
 export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu- 
 #export CC=~/TOOLCHAIN/dtc/bin/clang 
 #export CLANG_TRIPLE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
-#export LD=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-ld.gold
+export LD=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-ld.gold
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 mkdir -p out
