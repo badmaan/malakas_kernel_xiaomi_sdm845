@@ -9,8 +9,9 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 
-/* default tunable values */
-static const unsigned int max_writes_starved = 8; /* max amount of times reads can starve pending writes */
+/* Default tunable values */
+#define	DEFAULT_MAX_WRITES_STARVED		4	/* Max times reads can starve a write */
+#define	DEFAULT_MAX_WRITES_STARVED_SUSPENDED	0	/* Ditto but during screen-off states */
 
 struct anxiety_data {
 	struct list_head queue[2];
