@@ -21,22 +21,24 @@
 #include <asm/fpu/api.h>
 
 struct crypto_fpu_ctx {
-	struct crypto_blkcipher *child;
+	struct crypto_sync_skcipher *child;
 };
 
 static int crypto_fpu_setkey(struct crypto_tfm *parent, const u8 *key,
 			     unsigned int keylen)
 {
-	struct crypto_fpu_ctx *ctx = crypto_tfm_ctx(parent);
-	struct crypto_blkcipher *child = ctx->child;
+	struct crypto_fpu_ctx *ctx = crypto_skcipher_ctx(parent);
+	struct crypto_sync_skcipher *child = ctx->child;
 	int err;
 
-	crypto_blkcipher_clear_flags(child, CRYPTO_TFM_REQ_MASK);
-	crypto_blkcipher_set_flags(child, crypto_tfm_get_flags(parent) &
-				   CRYPTO_TFM_REQ_MASK);
-	err = crypto_blkcipher_setkey(child, key, keylen);
-	crypto_tfm_set_flags(parent, crypto_blkcipher_get_flags(child) &
-				     CRYPTO_TFM_RES_MASK);
+	crypto_sync_skcipher_clear_flags(child, CRYPTO_TFM_REQ_MASK);
+	crypto_sync_skcipher_set_flags(child,
+				       crypto_skcipher_get_flags(parent) &
+					 CRYPTO_TFM_REQ_MASK);
+	err = crypto_sync_skcipher_setkey(child, key, keylen);
+	crypto_skcipher_set_flags(parent,
+				  crypto_sync_skcipher_get_flags(child) &
+					  CRYPTO_TFM_RES_MASK);
 	return err;
 }
 
@@ -44,6 +46,10 @@ static int crypto_fpu_encrypt(struct blkcipher_desc *desc_in,
 			      struct scatterlist *dst, struct scatterlist *src,
 			      unsigned int nbytes)
 {
+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+	struct crypto_fpu_ctx *ctx = crypto_skcipher_ctx(tfm);
+	struct crypto_sync_skcipher *child = ctx->child;
+	SYNC_SKCIPHER_REQUEST_ON_STACK(subreq, child);
 	int err;
 	struct crypto_fpu_ctx *ctx = crypto_blkcipher_ctx(desc_in->tfm);
 	struct crypto_blkcipher *child = ctx->child;
@@ -52,6 +58,11 @@ static int crypto_fpu_encrypt(struct blkcipher_desc *desc_in,
 		.info = desc_in->info,
 		.flags = desc_in->flags & ~CRYPTO_TFM_REQ_MAY_SLEEP,
 	};
+
+	skcipher_request_set_sync_tfm(subreq, child);
+	skcipher_request_set_callback(subreq, 0, NULL, NULL);
+	skcipher_request_set_crypt(subreq, req->src, req->dst, req->cryptlen,
+				   req->iv);
 
 	kernel_fpu_begin();
 	err = crypto_blkcipher_crt(desc.tfm)->encrypt(&desc, dst, src, nbytes);
@@ -63,6 +74,10 @@ static int crypto_fpu_decrypt(struct blkcipher_desc *desc_in,
 			      struct scatterlist *dst, struct scatterlist *src,
 			      unsigned int nbytes)
 {
+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+	struct crypto_fpu_ctx *ctx = crypto_skcipher_ctx(tfm);
+	struct crypto_sync_skcipher *child = ctx->child;
+	SYNC_SKCIPHER_REQUEST_ON_STACK(subreq, child);
 	int err;
 	struct crypto_fpu_ctx *ctx = crypto_blkcipher_ctx(desc_in->tfm);
 	struct crypto_blkcipher *child = ctx->child;
@@ -71,6 +86,11 @@ static int crypto_fpu_decrypt(struct blkcipher_desc *desc_in,
 		.info = desc_in->info,
 		.flags = desc_in->flags & ~CRYPTO_TFM_REQ_MAY_SLEEP,
 	};
+
+	skcipher_request_set_sync_tfm(subreq, child);
+	skcipher_request_set_callback(subreq, 0, NULL, NULL);
+	skcipher_request_set_crypt(subreq, req->src, req->dst, req->cryptlen,
+				   req->iv);
 
 	kernel_fpu_begin();
 	err = crypto_blkcipher_crt(desc.tfm)->decrypt(&desc, dst, src, nbytes);
@@ -89,14 +109,16 @@ static int crypto_fpu_init_tfm(struct crypto_tfm *tfm)
 	if (IS_ERR(cipher))
 		return PTR_ERR(cipher);
 
-	ctx->child = cipher;
+	ctx->child = (struct crypto_sync_skcipher *)cipher;
+
 	return 0;
 }
 
 static void crypto_fpu_exit_tfm(struct crypto_tfm *tfm)
 {
-	struct crypto_fpu_ctx *ctx = crypto_tfm_ctx(tfm);
-	crypto_free_blkcipher(ctx->child);
+	struct crypto_fpu_ctx *ctx = crypto_skcipher_ctx(tfm);
+
+	crypto_free_sync_skcipher(ctx->child);
 }
 
 static struct crypto_instance *crypto_fpu_alloc(struct rtattr **tb)
