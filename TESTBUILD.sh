@@ -4,10 +4,10 @@ make kernelversion
 export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
 #/scripts/config -e CLANG_LTO
 #make ARCH=arm64 oldconfig
-export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu- 
+export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-elf-
 #export CC=~/TOOLCHAIN/dtc/bin/clang 
 #export CLANG_TRIPLE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
-export LD=~/TOOLCHAIN/dtc/bin/ld.lld
+export LD=~/TOOLCHAIN/clang/bin/ld.lld
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 mkdir -p out
