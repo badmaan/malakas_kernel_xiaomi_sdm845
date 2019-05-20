@@ -34,6 +34,10 @@
 
 #include "power.h"
 
+#include <linux/gpio.h>
+extern int slst_gpio_base_id;
+#define PROC_AWAKE_ID 12 /* 12th bit */
+
 const char *pm_states[PM_SUSPEND_MAX] = {
 	[PM_SUSPEND_FREEZE] = "freeze",
 	[PM_SUSPEND_MEM] = "mem",
