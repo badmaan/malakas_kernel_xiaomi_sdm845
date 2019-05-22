@@ -49,7 +49,7 @@
 		qcom,mdss-dsi-tx-eot-append;
 
 		qcom,dispparam-enabled;
-		qcom,mdss-panel-on-dimming-delay = <120>;
+		qcom,mdss-panel-on-dimming-delay = <60>;
 
 		qcom,ulps-enabled;
  		qcom,suspend-ulps-enabled;

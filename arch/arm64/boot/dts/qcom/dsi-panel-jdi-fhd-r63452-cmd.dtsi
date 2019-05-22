@@ -57,7 +57,7 @@
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
 		qcom,mdss-dsi-tx-eot-append;
-		qcom,mdss-panel-on-dimming-delay = <120>;
+		qcom,mdss-panel-on-dimming-delay = <60>;
 		qcom,mdss-night-brightness = <7 25 43 61>;
 		qcom,ulps-enabled;
  		qcom,suspend-ulps-enabled;
