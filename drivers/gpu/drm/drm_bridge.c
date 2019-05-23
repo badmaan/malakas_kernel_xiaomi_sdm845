@@ -263,14 +263,8 @@ void drm_bridge_post_disable(struct drm_bridge *bridge)
 	if (!bridge)
 		return;
 
-	if (bridge->is_dsi_drm_bridge)
-		mutex_lock(&bridge->lock);
-
 	if (bridge->funcs->post_disable)
 		bridge->funcs->post_disable(bridge);
-
-	if (bridge->is_dsi_drm_bridge)
-		mutex_unlock(&bridge->lock);
 
 	drm_bridge_post_disable(bridge->next);
 }
@@ -334,15 +328,8 @@ void drm_bridge_pre_enable(struct drm_bridge *bridge)
 }
 EXPORT_SYMBOL(drm_bridge_pre_enable);
 
-void __drm_bridge_enable(struct drm_bridge *bridge)
-{
-	if (!bridge)
-		return;
-
-	if (bridge->funcs->enable)
-		bridge->funcs->enable(bridge);
-
-	__drm_bridge_enable(bridge->next);
+	if (bridge->funcs->pre_enable)
+		bridge->funcs->pre_enable(bridge);
 }
 
 void drm_bridge_disp_param_set(struct drm_bridge *bridge, int cmd)
