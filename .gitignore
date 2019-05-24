@@ -119,3 +119,6 @@ all.config
 # fetched Android config fragments
 kernel/configs/android-*.cfg
 net/wireguard/
+
+# Ignore compiled objects
+obj
