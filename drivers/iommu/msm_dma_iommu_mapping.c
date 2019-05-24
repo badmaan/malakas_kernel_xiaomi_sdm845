@@ -39,7 +39,6 @@
  */
 struct msm_iommu_map {
 	struct list_head lnode;
-	struct rb_node node;
 	struct device *dev;
 	struct scatterlist sgl;
 	unsigned int nents;
@@ -158,6 +157,9 @@ static inline int __msm_dma_map_sg(struct device *dev, struct scatterlist *sg,
 	int ret = 0;
 	bool extra_meta_ref_taken = false;
 	int late_unmap = !(attrs & DMA_ATTR_NO_DELAYED_UNMAP);
+	struct msm_iommu_meta *meta;
+	struct msm_iommu_map *map;
+	int ret;
 
 	mutex_lock(&msm_iommu_map_mutex);
 	iommu_meta = msm_iommu_meta_lookup(dma_buf->priv);
@@ -225,7 +227,6 @@ static inline int __msm_dma_map_sg(struct device *dev, struct scatterlist *sg,
 				 * DMA occurs.
 				 */
 				dmb(ish);
-			ret = nents;
 		} else {
 			bool start_diff = (sg_phys(sg) !=
 					   iommu_map->buf_start_addr);
@@ -239,6 +240,7 @@ static inline int __msm_dma_map_sg(struct device *dev, struct scatterlist *sg,
 				iommu_map->nents, attrs, iommu_map->map_attrs,
 				start_diff);
 			ret = -EINVAL;
+			goto release_meta;
 		}
 	}
 	mutex_unlock(&iommu_meta->lock);
@@ -252,7 +254,7 @@ out:
 			msm_iommu_meta_put(iommu_meta);
 		msm_iommu_meta_put(iommu_meta);
 	}
-	return ret;
+	return nents;
 
 }
 
