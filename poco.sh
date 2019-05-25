@@ -8,6 +8,8 @@ export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-elf-
 #export CC=~/TOOLCHAIN/dtc/bin/clang 
 #export CLANG_TRIPLE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
 export LD=~/TOOLCHAIN/clang/bin/ld.lld
+export KBUILD_BUILD_USER=thanas
+export KBUILD_BUILD_HOST=MLX
 export USE_CCACHE=1
 export CCACHE_DIR=~/.ccache
 mkdir -p out
