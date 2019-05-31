@@ -128,11 +128,10 @@ static void cluster_prepare(struct lpm_cluster *cluster,
 static bool print_parsed_dt;
 module_param_named(print_parsed_dt, print_parsed_dt, bool, 0664);
 
-/**
- * msm_cpuidle_get_deep_idle_latency - Get deep idle latency value
- *
- * Returns an s32 latency value
- */
+static bool sleep_disabled;
+module_param_named(sleep_disabled,
+	sleep_disabled, bool, S_IRUGO | S_IWUSR | S_IWGRP);
+
 s32 msm_cpuidle_get_deep_idle_latency(void)
 {
 	return 10;
@@ -627,6 +626,9 @@ static int cpu_power_select(struct cpuidle_device *dev,
 
 	if (sleep_us < 0)
 		return best_level;
+
+	if (sleep_disabled)
+		return 0;
 
 	idx_restrict = cpu->nlevels + 1;
 
