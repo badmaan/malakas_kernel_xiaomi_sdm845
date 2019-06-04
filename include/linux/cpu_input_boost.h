@@ -18,4 +18,3 @@ static inline void cpu_input_boost_kick_max(unsigned int duration_ms)
 #endif
 
 #endif /* _CPU_INPUT_BOOST_H_ */
->>>>>>> 664643291707... cpu_input_boost: Introduce driver for event-based CPU boosting

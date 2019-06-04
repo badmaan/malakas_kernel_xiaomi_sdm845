@@ -309,7 +309,6 @@ struct cfq_group {
 	struct cfq_queue *async_idle_cfqq;
 
 	u64 group_idle;
-
 };
 
 struct cfq_io_cq {
@@ -805,6 +804,17 @@ static inline void cfqg_stats_update_completion(struct cfq_group *cfqg,
 			int op_flags) { }
 
 #endif	/* CONFIG_CFQ_GROUP_IOSCHED */
+
+static inline u64 get_group_idle(struct cfq_data *cfqd)
+{
+#ifdef CONFIG_CFQ_GROUP_IOSCHED
+	struct cfq_queue *cfqq = cfqd->active_queue;
+
+	if (cfqq && cfqq->cfqg)
+		return cfqq->cfqg->group_idle;
+#endif
+	return cfqd->cfq_group_idle;
+}
 
 #define cfq_log(cfqd, fmt, args...)	\
 	blk_add_trace_msg((cfqd)->queue, "cfq " fmt, ##args)
@@ -1796,20 +1806,7 @@ static int cfq_print_leaf_weight(struct seq_file *sf, void *v)
 	return 0;
 }
 
-static int cfq_print_group_idle_ms(struct seq_file *sf, void *v)
-{
-	struct blkcg *blkcg = css_to_blkcg(seq_css(sf));
-	struct cfq_group_data *cgd = blkcg_to_cfqgd(blkcg);
-	u64 val = 0;
-
-	if (cgd)
-		val = cgd->group_idle;
-
-	seq_printf(sf, "%llu\n", div_u64(val, NSEC_PER_MSEC));
-	return 0;
-}
-
-static int cfq_print_group_idle_us(struct seq_file *sf, void *v)
+static int cfq_print_group_idle(struct seq_file *sf, void *v)
 {
 	struct blkcg *blkcg = css_to_blkcg(seq_css(sf));
 	struct cfq_group_data *cgd = blkcg_to_cfqgd(blkcg);
@@ -1943,8 +1940,8 @@ static int cfq_set_leaf_weight(struct cgroup_subsys_state *css,
 	return __cfq_set_weight(css, val, false, false, true);
 }
 
-static int __cfq_set_group_idle(struct cgroup_subsys_state *css,
-			       u64 val, bool is_us)
+static int cfq_set_group_idle(struct cgroup_subsys_state *css,
+			       struct cftype *cft, u64 val)
 {
 	struct blkcg *blkcg = css_to_blkcg(css);
 	struct cfq_group_data *cfqgd;
@@ -1958,10 +1955,7 @@ static int __cfq_set_group_idle(struct cgroup_subsys_state *css,
 		goto out;
 	}
 
-	if (!is_us)
-		cfqgd->group_idle = val * NSEC_PER_MSEC;
-	else
-		cfqgd->group_idle = val * NSEC_PER_USEC;
+	cfqgd->group_idle = val * NSEC_PER_USEC;
 
 	hlist_for_each_entry(blkg, &blkcg->blkg_list, blkcg_node) {
 		struct cfq_group *cfqg = blkg_to_cfqg(blkg);
@@ -1975,18 +1969,6 @@ static int __cfq_set_group_idle(struct cgroup_subsys_state *css,
 out:
 	spin_unlock_irq(&blkcg->lock);
 	return ret;
-}
-
-static int cfq_set_group_idle_ms(struct cgroup_subsys_state *css,
-			       struct cftype *cft, u64 val)
-{
-	return __cfq_set_group_idle(css, val, false);
-}
-
-static int cfq_set_group_idle_us(struct cgroup_subsys_state *css,
-			       struct cftype *cft, u64 val)
-{
-	return __cfq_set_group_idle(css, val, true);
 }
 
 static int cfqg_print_stat(struct seq_file *sf, void *v)
@@ -2136,13 +2118,8 @@ static struct cftype cfq_blkcg_legacy_files[] = {
 	},
 	{
 		.name = "group_idle",
-		.seq_show = cfq_print_group_idle_ms,
-		.write_u64 = cfq_set_group_idle_ms,
-	},
-	{
-		.name = "group_idle_us",
-		.seq_show = cfq_print_group_idle_us,
-		.write_u64 = cfq_set_group_idle_us,
+		.seq_show = cfq_print_group_idle,
+		.write_u64 = cfq_set_group_idle,
 	},
 
 	/* statistics, covers only the tasks in the cfqg */
