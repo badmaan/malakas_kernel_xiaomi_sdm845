@@ -34,13 +34,16 @@
 #define MHI_UCI_IPC_LOG_PAGES		(100)
 
 /* Max number of MHI write request structures (used in async writes) */
-#define MAX_UCI_WR_REQ			10
+#define MHI_UCI_NUM_WR_REQ_DEFAULT	10
 #define MAX_NR_TRBS_PER_CHAN		9
 #define MHI_QTI_IFACE_ID		4
 #define DEVICE_NAME			"mhi"
 #define MAX_DEVICE_NAME_SIZE		80
 
 #define MHI_UCI_ASYNC_READ_TIMEOUT	msecs_to_jiffies(100)
+#define MHI_UCI_ASYNC_WRITE_TIMEOUT	msecs_to_jiffies(100)
+#define MHI_UCI_AT_CTRL_READ_TIMEOUT	msecs_to_jiffies(1000)
+#define MHI_UCI_WRITE_REQ_AVAIL_TIMEOUT msecs_to_jiffies(1000)
 
 enum uci_dbg_level {
 	UCI_DBG_VERBOSE = 0x0,
@@ -77,6 +80,15 @@ struct chan_attr {
 	bool register_cb;
 	/* Name of char device */
 	char *device_name;
+	/* Client-specific TRE handler */
+	void (*tre_notif_cb)(struct mhi_dev_client_cb_reason *reason);
+	/* Write completion - false if not needed */
+	bool wr_cmpl;
+	/* Uevent broadcast of channel state */
+	bool state_bcast;
+	/* Number of write request structs to allocate */
+	u32 num_wr_reqs;
+
 };
 
 /* UCI channel attributes table */
@@ -206,8 +218,12 @@ static const struct chan_attr uci_chan_attr_table[] = {
 		TRB_MAX_DATA_SIZE,
 		MAX_NR_TRBS_PER_CHAN,
 		MHI_DIR_IN,
+		NULL,
+		NULL,
+		NULL,
 		false,
-		NULL
+		false,
+		50
 	},
 	{
 		MHI_CLIENT_ADB_OUT,
@@ -375,6 +391,12 @@ static void mhi_uci_write_completion_cb(void *req)
 	spin_lock_irqsave(&uci_handle->wr_req_lock, flags);
 	list_add_tail(&ureq->list, &uci_handle->wr_req_list);
 	spin_unlock_irqrestore(&uci_handle->wr_req_lock, flags);
+
+	if (uci_handle->write_done)
+		complete(uci_handle->write_done);
+
+	/* Write queue may be waiting for write request structs */
+	wake_up(&uci_handle->write_wq);
 }
 
 static void mhi_uci_read_completion_cb(void *req)
@@ -418,7 +440,7 @@ static int mhi_uci_send_async(struct uci_client *uci_handle,
 	if (list_empty(&uci_handle->wr_req_list)) {
 		uci_log(UCI_DBG_ERROR, "Write request pool empty\n");
 		spin_unlock_irq(&uci_handle->wr_req_lock);
-		return -ENOMEM;
+		return -EBUSY;
 	}
 	ureq = container_of(uci_handle->wr_req_list.next,
 						struct mhi_req, list);
@@ -457,8 +479,70 @@ static int mhi_uci_send_packet(struct mhi_dev_client **client_handle,
 	unsigned long memcpy_result;
 	struct uci_client *uci_handle;
 
-	if (!client_handle || !buf || !size)
-		return -EINVAL;
+	mutex_lock(&uci_handle->out_chan_lock);
+	do {
+		ret_val = uci_handle->send(uci_handle, data_loc, size);
+		if (!ret_val) {
+			uci_log(UCI_DBG_VERBOSE,
+				"No descriptors available, did we poll, chan %d?\n",
+				uci_handle->out_chan);
+			mutex_unlock(&uci_handle->out_chan_lock);
+			if (uci_handle->f_flags & (O_NONBLOCK | O_NDELAY))
+				return -EAGAIN;
+			ret_val = wait_event_interruptible(uci_handle->write_wq,
+					!mhi_dev_channel_isempty(
+					uci_handle->out_handle));
+			if (-ERESTARTSYS == ret_val) {
+				uci_log(UCI_DBG_WARNING,
+					"Waitqueue cancelled by system\n");
+				return ret_val;
+			}
+			mutex_lock(&uci_handle->out_chan_lock);
+		} else if (ret_val == -EBUSY) {
+			/*
+			 * All write requests structs have been exhausted.
+			 * Wait till pending writes complete or a timeout.
+			 */
+			uci_log(UCI_DBG_VERBOSE,
+				"Write req list empty for chan %d\n",
+				uci_handle->out_chan);
+			mutex_unlock(&uci_handle->out_chan_lock);
+			if (uci_handle->f_flags & (O_NONBLOCK | O_NDELAY))
+				return -EAGAIN;
+			ret_val = wait_event_interruptible_timeout(
+					uci_handle->write_wq,
+					!list_empty(&uci_handle->wr_req_list),
+					MHI_UCI_WRITE_REQ_AVAIL_TIMEOUT);
+			if (ret_val > 0) {
+				/*
+				 * Write request struct became available,
+				 * retry the write.
+				 */
+				uci_log(UCI_DBG_VERBOSE,
+				"Write req struct available for chan %d\n",
+					uci_handle->out_chan);
+				mutex_lock(&uci_handle->out_chan_lock);
+				ret_val = 0;
+				continue;
+			} else if (!ret_val) {
+				uci_log(UCI_DBG_ERROR,
+				"Timed out waiting for write req, chan %d\n",
+					uci_handle->out_chan);
+				return -EIO;
+			} else if (-ERESTARTSYS == ret_val) {
+				uci_log(UCI_DBG_WARNING,
+					"Waitqueue cancelled by system\n");
+				return ret_val;
+			}
+		} else if (ret_val < 0) {
+			uci_log(UCI_DBG_ERROR,
+				"Err sending data: chan %d, buf %pK, size %d\n",
+				uci_handle->out_chan, data_loc, size);
+			ret_val = -EIO;
+			break;
+		}
+	} while (!ret_val);
+	mutex_unlock(&uci_handle->out_chan_lock);
 
 	if (size > TRB_MAX_DATA_SIZE) {
 		uci_log(UCI_DBG_ERROR,
@@ -545,8 +629,13 @@ static unsigned int mhi_uci_client_poll(struct file *file, poll_table *wait)
 static int mhi_uci_alloc_write_reqs(struct uci_client *client)
 {
 	int i;
+	u32 num_wr_reqs;
 
-	client->wreqs = kcalloc(MAX_UCI_WR_REQ,
+	num_wr_reqs = client->in_chan_attr->num_wr_reqs;
+	if (!num_wr_reqs)
+		num_wr_reqs = MHI_UCI_NUM_WR_REQ_DEFAULT;
+
+	client->wreqs = kcalloc(num_wr_reqs,
 				sizeof(struct mhi_req),
 				GFP_KERNEL);
 	if (!client->wreqs) {
@@ -555,11 +644,12 @@ static int mhi_uci_alloc_write_reqs(struct uci_client *client)
 	}
 
 	INIT_LIST_HEAD(&client->wr_req_list);
-	for (i = 0; i < MAX_UCI_WR_REQ; ++i)
+	for (i = 0; i < num_wr_reqs; ++i)
 		list_add_tail(&client->wreqs[i].list, &client->wr_req_list);
 
 	uci_log(UCI_DBG_INFO,
-		"UCI write reqs allocation successful\n");
+		"Allocated %d write reqs for chan %d\n",
+		num_wr_reqs, client->out_chan);
 	return 0;
 }
 
@@ -1148,6 +1238,153 @@ static int mhi_register_client(struct uci_client *mhi_client, int index)
 
 	uci_log(UCI_DBG_DBG, "Registering chan %d.\n", mhi_client->out_chan);
 	return 0;
+}
+
+static int mhi_uci_ctrl_set_tiocm(struct uci_client *client,
+				unsigned int ser_state)
+{
+	unsigned int cur_ser_state;
+	unsigned long compl_ret;
+	struct mhi_uci_ctrl_msg *ctrl_msg;
+	int ret_val;
+	struct uci_client *ctrl_client =
+		&uci_ctxt.client_handles[CHAN_TO_CLIENT
+					(MHI_CLIENT_IP_CTRL_1_OUT)];
+	unsigned int info = 0;
+
+	uci_log(UCI_DBG_VERBOSE, "Rcvd ser_state = 0x%x\n", ser_state);
+
+	/* Check if the IP_CTRL channels were started by host */
+	mhi_ctrl_state_info(MHI_CLIENT_IP_CTRL_1_IN, &info);
+	if (info != MHI_STATE_CONNECTED) {
+		uci_log(UCI_DBG_VERBOSE,
+			"IP_CTRL channels not started by host yet\n");
+		return -EAGAIN;
+	}
+
+	cur_ser_state = client->tiocm & ~(TIOCM_DTR | TIOCM_RTS);
+	ser_state &= (TIOCM_CD | TIOCM_DSR | TIOCM_RI);
+
+	if (cur_ser_state == ser_state)
+		return 0;
+
+	ctrl_msg = kzalloc(sizeof(*ctrl_msg), GFP_KERNEL);
+	if (!ctrl_msg)
+		return -ENOMEM;
+
+	ctrl_msg->preamble = MHI_UCI_CTRL_MSG_MAGIC;
+	ctrl_msg->msg_id = MHI_UCI_CTRL_MSGID_SERIAL_STATE;
+	ctrl_msg->dest_id = client->out_chan;
+	ctrl_msg->size = sizeof(unsigned int);
+	if (ser_state & TIOCM_CD)
+		ctrl_msg->msg |= MHI_UCI_CTRL_MSG_DCD;
+	if (ser_state & TIOCM_DSR)
+		ctrl_msg->msg |= MHI_UCI_CTRL_MSG_DSR;
+	if (ser_state & TIOCM_RI)
+		ctrl_msg->msg |= MHI_UCI_CTRL_MSG_RI;
+
+	reinit_completion(ctrl_client->write_done);
+	ret_val = mhi_uci_send_packet(ctrl_client, ctrl_msg, sizeof(*ctrl_msg));
+	if (ret_val != sizeof(*ctrl_msg))
+		goto tiocm_error;
+	compl_ret = wait_for_completion_interruptible_timeout(
+			ctrl_client->write_done,
+			MHI_UCI_ASYNC_WRITE_TIMEOUT);
+	if (compl_ret == -ERESTARTSYS) {
+		uci_log(UCI_DBG_ERROR, "Exit signal caught\n");
+		ret_val = compl_ret;
+		goto tiocm_error;
+	} else if (compl_ret == 0) {
+		uci_log(UCI_DBG_ERROR, "Timed out trying to send ctrl msg\n");
+		ret_val = -EIO;
+		goto tiocm_error;
+	}
+
+	client->tiocm &= ~(TIOCM_CD | TIOCM_DSR | TIOCM_RI);
+	client->tiocm |= ser_state;
+	return 0;
+
+tiocm_error:
+	kfree(ctrl_msg);
+	return ret_val;
+}
+
+static void mhi_uci_at_ctrl_read(struct work_struct *work)
+{
+	int ret_val;
+	int msg_size = 0;
+	struct uci_client *ctrl_client =
+		&uci_ctxt.client_handles[CHAN_TO_CLIENT
+		(MHI_CLIENT_IP_CTRL_1_OUT)];
+	struct uci_client *tgt_client;
+	struct mhi_uci_ctrl_msg *ctrl_msg;
+	unsigned int chan;
+	unsigned long compl_ret;
+
+	while (!mhi_dev_channel_isempty(ctrl_client->in_handle)) {
+
+		ctrl_client->pkt_loc = NULL;
+		ctrl_client->pkt_size = 0;
+
+		ret_val = __mhi_uci_client_read(ctrl_client, &msg_size);
+		if (ret_val) {
+			uci_log(UCI_DBG_ERROR,
+				"Ctrl msg read failed, ret_val is %d\n",
+				ret_val);
+			return;
+		}
+		if (msg_size != sizeof(*ctrl_msg)) {
+			uci_log(UCI_DBG_ERROR, "Invalid ctrl msg size\n");
+			return;
+		}
+		if (!ctrl_client->pkt_loc) {
+			uci_log(UCI_DBG_ERROR, "ctrl msg pkt_loc null\n");
+			return;
+		}
+		ctrl_msg = ctrl_client->pkt_loc;
+		chan = ctrl_msg->dest_id;
+
+		if (chan >= MHI_MAX_SOFTWARE_CHANNELS) {
+			uci_log(UCI_DBG_ERROR,
+				"Invalid channel number in ctrl msg\n");
+			return;
+		}
+
+		uci_log(UCI_DBG_VERBOSE, "preamble: 0x%x\n",
+				ctrl_msg->preamble);
+		uci_log(UCI_DBG_VERBOSE, "msg_id: 0x%x\n", ctrl_msg->msg_id);
+		uci_log(UCI_DBG_VERBOSE, "dest_id: 0x%x\n", ctrl_msg->dest_id);
+		uci_log(UCI_DBG_VERBOSE, "size: 0x%x\n", ctrl_msg->size);
+		uci_log(UCI_DBG_VERBOSE, "msg: 0x%x\n", ctrl_msg->msg);
+
+		tgt_client = &uci_ctxt.client_handles[CHAN_TO_CLIENT(chan)];
+		tgt_client->tiocm &= ~(TIOCM_DTR | TIOCM_RTS);
+
+		if (ctrl_msg->msg & MHI_UCI_CTRL_MSG_DTR)
+			tgt_client->tiocm |= TIOCM_DTR;
+		if (ctrl_msg->msg & MHI_UCI_CTRL_MSG_RTS)
+			tgt_client->tiocm |= TIOCM_RTS;
+
+		uci_log(UCI_DBG_VERBOSE, "Rcvd tiocm %d\n", tgt_client->tiocm);
+
+		/* Wait till client reads the new state */
+		reinit_completion(&tgt_client->at_ctrl_read_done);
+
+		tgt_client->at_ctrl_mask = POLLPRI;
+		wake_up(&tgt_client->read_wq);
+
+		uci_log(UCI_DBG_VERBOSE, "Waiting for at_ctrl_read_done");
+		compl_ret = wait_for_completion_interruptible_timeout(
+					&tgt_client->at_ctrl_read_done,
+					MHI_UCI_AT_CTRL_READ_TIMEOUT);
+		if (compl_ret == -ERESTARTSYS) {
+			uci_log(UCI_DBG_ERROR, "Exit signal caught\n");
+			return;
+		} else if (compl_ret == 0) {
+			uci_log(UCI_DBG_ERROR,
+			"Timed out waiting for client to read ctrl state\n");
+		}
+	}
 }
 
 static long mhi_uci_client_ioctl(struct file *file, unsigned int cmd,

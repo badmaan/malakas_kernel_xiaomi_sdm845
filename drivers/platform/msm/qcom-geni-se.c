@@ -39,6 +39,8 @@
 #define GENI_SE_DMA_PTR_H(ptr) 0
 #endif
 
+/* Convert BCM threshold to actual frequency x 4 */
+#define CONV_TO_BW(x) (x*20000*4)
 #define NUM_LOG_PAGES 2
 #define MAX_CLK_PERF_LEVEL 32
 static unsigned long default_bus_bw_set[] = {0, 19200000, 50000000, 100000000};
@@ -638,7 +640,15 @@ static int geni_se_rmv_ab_ib(struct geni_se_device *geni_se_dev,
 		geni_se_dev->cur_ib = 0;
 
 	bus_bw_update = geni_se_check_bus_bw(geni_se_dev);
-	if (bus_bw_update)
+
+	if (geni_se_dev->num_paths == 2) {
+		geni_se_dev->pdata->usecase[1].vectors[0].ab  =
+			CONV_TO_BW(geni_se_dev->cur_ab);
+		geni_se_dev->pdata->usecase[1].vectors[0].ib  =
+			CONV_TO_BW(geni_se_dev->cur_ib);
+	}
+
+	if (bus_bw_update && geni_se_dev->num_paths != 2)
 		ret = msm_bus_scale_update_bw(geni_se_dev->bus_bw,
 						geni_se_dev->cur_ab,
 						geni_se_dev->cur_ib);
@@ -736,7 +746,15 @@ static int geni_se_add_ab_ib(struct geni_se_device *geni_se_dev,
 		geni_se_dev->cur_ib = rsc->ib;
 
 	bus_bw_update = geni_se_check_bus_bw(geni_se_dev);
-	if (bus_bw_update)
+
+	if (geni_se_dev->num_paths == 2) {
+		geni_se_dev->pdata->usecase[1].vectors[0].ab  =
+			CONV_TO_BW(geni_se_dev->cur_ab);
+		geni_se_dev->pdata->usecase[1].vectors[0].ib  =
+			CONV_TO_BW(geni_se_dev->cur_ib);
+	}
+
+	if (bus_bw_update && geni_se_dev->num_paths != 2)
 		ret = msm_bus_scale_update_bw(geni_se_dev->bus_bw,
 						geni_se_dev->cur_ab,
 						geni_se_dev->cur_ib);
@@ -845,6 +863,7 @@ EXPORT_SYMBOL(se_geni_resources_on);
 int geni_se_resources_init(struct se_geni_rsc *rsc,
 			   unsigned long ab, unsigned long ib)
 {
+	int ret = 0;
 	struct geni_se_device *geni_se_dev;
 
 	if (unlikely(!rsc || !rsc->wrapper_dev))
@@ -871,8 +890,11 @@ int geni_se_resources_init(struct se_geni_rsc *rsc,
 	rsc->ib = ib;
 	INIT_LIST_HEAD(&rsc->ab_list);
 	INIT_LIST_HEAD(&rsc->ib_list);
-	geni_se_iommu_map_and_attach(geni_se_dev);
-	return 0;
+	ret = geni_se_iommu_map_and_attach(geni_se_dev);
+	if (ret)
+		GENI_SE_ERR(geni_se_dev->log_ctx, false, NULL,
+			"%s: Error %d iommu_map_and_attach\n", __func__, ret);
+	return ret;
 }
 EXPORT_SYMBOL(geni_se_resources_init);
 
@@ -1128,6 +1150,10 @@ static int geni_se_iommu_map_and_attach(struct geni_se_device *geni_se_dev)
 	size_t va_size = GENI_SE_IOMMU_VA_SIZE;
 	int bypass = 1;
 	struct device *cb_dev = geni_se_dev->cb_dev;
+
+	/*Don't proceed if IOMMU node is disabled*/
+	if (!iommu_present(&platform_bus_type))
+		return 0;
 
 	mutex_lock(&geni_se_dev->iommu_lock);
 	if (likely(geni_se_dev->iommu_map)) {
