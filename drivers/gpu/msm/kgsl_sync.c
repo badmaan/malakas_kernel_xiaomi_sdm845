@@ -296,7 +296,7 @@ static void kgsl_sync_timeline_value_str(struct fence *fence,
 	timestamp_queued = kgsl_sync_fence_get_timestamp(ktimeline,
 					KGSL_TIMESTAMP_QUEUED);
 
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	snprintf(str, size, "%u queued:%u retired:%u",
 		ktimeline->last_timestamp,
 		timestamp_queued, timestamp_retired);
@@ -307,7 +307,7 @@ static void kgsl_sync_timeline_value_str(struct fence *fence,
 
 static void kgsl_sync_fence_value_str(struct fence *fence, char *str, int size)
 {
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	struct kgsl_sync_fence *kfence = (struct kgsl_sync_fence *)fence;
 
 	snprintf(str, size, "%u", kfence->timestamp);
@@ -321,7 +321,7 @@ static const char *kgsl_sync_fence_driver_name(struct fence *fence)
 
 static const char *kgsl_sync_timeline_name(struct fence *fence)
 {
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	struct kgsl_sync_fence *kfence = (struct kgsl_sync_fence *)fence;
 	struct kgsl_sync_timeline *ktimeline = kfence->parent;
 
@@ -335,7 +335,7 @@ int kgsl_sync_timeline_create(struct kgsl_context *context)
 {
 	struct kgsl_sync_timeline *ktimeline;
 
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	/*
 	 * Generate a name which includes the thread name, thread id, process
 	 * name, process id, and context id. This makes it possible to
@@ -348,7 +348,7 @@ int kgsl_sync_timeline_create(struct kgsl_context *context)
 	if (!_kgsl_context_get(context))
 		return -ENOENT;
 
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	snprintf(ktimeline_name, sizeof(ktimeline_name),
 		"%s_%d-%.15s(%d)-%.15s(%d)",
 		context->device->name, context->id,
@@ -363,7 +363,7 @@ int kgsl_sync_timeline_create(struct kgsl_context *context)
 	}
 
 	kref_init(&ktimeline->kref);
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	strlcpy(ktimeline->name, ktimeline_name, KGSL_TIMELINE_NAME_LEN);
 #endif
 	ktimeline->fence_context = fence_context_alloc(1);
@@ -557,7 +557,9 @@ long kgsl_ioctl_syncsource_create(struct kgsl_device_private *dev_priv,
 	int ret = -EINVAL;
 	int id = 0;
 	struct kgsl_process_private *private = dev_priv->process_priv;
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	char name[KGSL_TIMELINE_NAME_LEN];
+#endif
 
 	if (!kgsl_process_private_get(private))
 		return ret;
@@ -568,13 +570,13 @@ long kgsl_ioctl_syncsource_create(struct kgsl_device_private *dev_priv,
 		goto out;
 	}
 
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	snprintf(name, sizeof(name), "kgsl-syncsource-pid-%d",
 			current->group_leader->pid);
 #endif
 
 	kref_init(&syncsource->refcount);
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	strlcpy(syncsource->name, name, KGSL_TIMELINE_NAME_LEN);
 #endif
 	syncsource->private = private;
@@ -853,7 +855,7 @@ void kgsl_syncsource_process_release_syncsources(
 
 static const char *kgsl_syncsource_get_timeline_name(struct fence *fence)
 {
-#ifdef CONFIG_SYNC_FENCE_DEBUG
+#ifdef CONFIG_DRM_SYNC_DEBUG
 	struct kgsl_syncsource_fence *sfence =
 			(struct kgsl_syncsource_fence *)fence;
 	struct kgsl_syncsource *syncsource = sfence->parent;
