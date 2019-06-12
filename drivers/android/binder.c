@@ -6006,6 +6006,10 @@ static int __init binder_init(void)
 	if (ret)
 		return ret;
 
+	ret = binder_create_pools();
+	if (ret)
+		return ret;
+
 	atomic_set(&binder_transaction_log.cur, ~0U);
 	atomic_set(&binder_transaction_log_failed.cur, ~0U);
 	binder_deferred_workqueue = create_singlethread_workqueue("binder");
@@ -6076,6 +6080,7 @@ err_init_binder_device_failed:
 
 err_alloc_device_names_failed:
 	debugfs_remove_recursive(binder_debugfs_dir_entry_root);
+	binder_destroy_pools();
 
 	destroy_workqueue(binder_deferred_workqueue);
 err_workqueue_init_failed:
