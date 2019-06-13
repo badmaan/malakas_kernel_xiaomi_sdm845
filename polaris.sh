@@ -4,7 +4,7 @@ make kernelversion
 export ARCH=arm64 && export SUBARCH=arm64 malakas_polaris_defconfig
 #/scripts/config -e CLANG_LTO
 #make ARCH=arm64 oldconfig
-export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-elf-
+export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=~/TOOLCHAIN/gcc32/bin/arm-linux-gnueabihf-
 #export CC=~/TOOLCHAIN/dtc/bin/clang 
 #export CLANG_TRIPLE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
