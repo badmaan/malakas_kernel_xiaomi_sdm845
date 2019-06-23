@@ -1,6 +1,7 @@
 #!/bin/bash
 rm -rf /out
 make kernelversion
+date
 export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
 #/scripts/config -e CLANG_LTO
 #make ARCH=arm64 oldconfig
@@ -25,6 +26,7 @@ rm -rf Image.gz-dtb
 mv malakas_kernel_beryllium_69-65hz_$(date +"%Y-%m-%d").zip ~/Desktop/MLX/
 cd ~/Desktop/MLX/
 ls
+date
 adb kill-server
 adb tcpip 5555
 adb connect 192.168.3.101:5555

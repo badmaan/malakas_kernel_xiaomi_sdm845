@@ -1,6 +1,7 @@
 #!/bin/bash
 rm -rf /out
 make kernelversion
+date
 export ARCH=arm64 && export SUBARCH=arm64 malakas_polaris_defconfig
 #/scripts/config -e CLANG_LTO
 #make ARCH=arm64 oldconfig
@@ -25,5 +26,6 @@ rm -rf Image.gz-dtb
 mv malakas_kernel_polaris_$(date +"%Y-%m-%d").zip ~/Desktop/MLX/
 cd ~/Desktop/MLX/
 ls
+date
 
 
