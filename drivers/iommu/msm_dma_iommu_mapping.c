@@ -13,7 +13,7 @@
 struct msm_iommu_meta {
 	struct rb_node node;
 	struct list_head maps;
-	atomic_t refcount;
+	struct kref ref;
 	rwlock_t lock;
 	void *buffer;
 };
@@ -113,18 +113,35 @@ static void msm_iommu_meta_put(struct msm_iommu_meta *meta, int count)
 static struct msm_iommu_meta *msm_iommu_meta_create(struct dma_buf *dma_buf,
 						    bool get_extra_ref)
 {
+	struct msm_iommu_map *map = container_of(kref, typeof(*map), ref);
+	struct msm_iommu_meta *meta = map->meta;
+
+	write_lock(&meta->lock);
+	list_del(&map->lnode);
+	write_unlock(&meta->lock);
+
+	dma_unmap_sg(map->dev, &map->sgl, map->nents, map->dir);
+	kfree(map);
+}
+
+static void msm_iommu_map_destroy_noop(struct kref *kref)
+{
+	/* For when we need to unmap on our own terms */
+}
+
+static struct msm_iommu_meta *msm_iommu_meta_create(struct dma_buf *dma_buf)
+{
 	struct msm_iommu_meta *meta;
 
 	meta = kmalloc(sizeof(*meta), GFP_KERNEL);
 	if (!meta)
 		return NULL;
 
-	*meta = (typeof(*meta)){
-		.buffer = dma_buf->priv,
-		.refcount = ATOMIC_INIT(1 + !!get_extra_ref),
-		.lock = __RW_LOCK_UNLOCKED(&meta->lock),
-		.maps = LIST_HEAD_INIT(meta->maps)
-	};
+	meta->buffer = dma_buf->priv;
+	kref_init(&meta->ref);
+	rwlock_init(&meta->lock);
+	INIT_LIST_HEAD(&meta->maps);
+	msm_iommu_meta_add(meta);
 
 	msm_iommu_meta_add(meta);
 	return meta;
@@ -241,13 +258,11 @@ void msm_dma_unmap_sg(struct device *dev, struct scatterlist *sgl, int nents,
 		list_del(&map->lnode);
 	write_unlock(&meta->lock);
 
-	if (free_map) {
-		dma_unmap_sg(map->dev, &map->sgl, map->nents, map->dir);
-		kfree(map);
-	}
-
-	msm_iommu_meta_put(meta, 1);
+	/* Do an extra put to undo msm_iommu_meta_lookup_get */
+	kref_put(&meta->ref, msm_iommu_meta_destroy);
+	kref_put(&meta->ref, msm_iommu_meta_destroy);
 }
+EXPORT_SYMBOL(msm_dma_unmap_sg);
 
 int msm_dma_unmap_all_for_dev(struct device *dev)
 {
