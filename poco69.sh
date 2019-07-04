@@ -5,10 +5,10 @@ date
 export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
 #/scripts/config -e CLANG_LTO
 #make ARCH=arm64 oldconfig
-export CROSS_COMPILE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
-export CROSS_COMPILE_ARM32=~/TOOLCHAIN/gcc32/bin/arm-linux-gnueabihf-
-#export CC=~/TOOLCHAIN/dtc/bin/clang 
-#export CLANG_TRIPLE=~/TOOLCHAIN/gcc/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+export CROSS_COMPILE_ARM32=~/TOOLCHAIN/arm-linux-gnueabi/bin/arm-linux-gnueabi-
+#export CC=~/TOOLCHAIN/clang/bin/clang 
+#export CLANG_TRIPLE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
 export LD=~/TOOLCHAIN/clang/bin/ld.lld
 export KBUILD_BUILD_USER=thanas
 export KBUILD_BUILD_HOST=MLX
