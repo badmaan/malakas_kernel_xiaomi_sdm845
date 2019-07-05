@@ -812,7 +812,6 @@ static struct shrinker lowmem_shrinker = {
 static int __init lowmem_init(void)
 {
 	register_shrinker(&lowmem_shrinker);
-	lmk_event_init();
 	vmpressure_notifier_register(&lmk_vmpr_nb);
 	lmk_event_init();
 	return 0;
