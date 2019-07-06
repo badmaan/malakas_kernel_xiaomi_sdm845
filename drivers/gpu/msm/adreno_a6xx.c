@@ -29,6 +29,7 @@
 #include "kgsl.h"
 #include "kgsl_gmu.h"
 #include "kgsl_trace.h"
+#include "kgsl_gmu.h"
 
 #define MIN_HBB		13
 
