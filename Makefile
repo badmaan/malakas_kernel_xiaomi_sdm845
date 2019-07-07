@@ -738,7 +738,7 @@ lto-flags	:= $(lto-clang-flags)
 KBUILD_CFLAGS	+= $(lto-flags)
 
 ifeq ($(ld-name),lld)
-LDFLAGS		+= --lto-O3
+LDFLAGS		+= --lto-Ofast
 endif
 
 ifeq ($(ld-name),lld)
