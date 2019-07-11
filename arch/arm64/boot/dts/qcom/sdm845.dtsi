@@ -863,6 +863,35 @@
 		reg-names = "pshold-base", "tcsr-boot-misc-detect";
 	};
 
+	tcsr_mutex_block: syscon@1f40000 {
+		compatible = "syscon";
+		reg = <0x1f40000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock@1f40000 {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	sp_scsr_block: syscon@1880000 {
+		compatible = "syscon";
+		reg = <0x1880000 0x10000>;
+	};
+
+	qmp_aop: qcom,qmp-aop@c300000 {
+		compatible = "qcom,qmp-mbox";
+		label = "aop";
+		reg = <0xc300000 0x100000>,
+			<0x1799000c 0x4>;
+		reg-names = "msgram", "irq-reg-base";
+		qcom,irq-mask = <0x1>;
+		interrupts = <0 389 1>;
+		priority = <0>;
+		mbox-desc-offset = <0x0>;
+		#mbox-cells = <1>;
+	};
+
 	aop-msg-client {
 		compatible = "qcom,debugfs-qmp-client";
 		mboxes = <&qmp_aop 0>;
@@ -2153,7 +2182,14 @@
 		qcom,num-locks = <8>;
 	};
 
-	qcom,smem@86000000 {
+	sp_scsr: mailbox@188501c {
+		compatible = "qcom,sm8150-spcs-global";
+		reg = <0x188501c 0x4>;
+
+		#mbox-cells = <1>;
+	};
+
+	smem: qcom,smem@8600000 {
 		compatible = "qcom,smem";
 		reg = <0x86000000 0x200000>,
 			<0x17911008 0x4>,
@@ -2164,32 +2200,29 @@
 		qcom,mpu-enabled;
 	};
 
-	qcom,glink-mailbox-xprt-spss@1885008 {
-		compatible = "qcom,glink-mailbox-xprt";
-		reg = <0x1885008 0x8>,
-			<0x1885010 0x4>,
-			<0x188501c 0x4>,
-			<0x1886008 0x4>;
-		reg-names = "mbox-loc-addr", "mbox-loc-size", "irq-reg-base",
-				"irq-rx-reset";
-		qcom,irq-mask = <0x1>;
-		interrupts = <0 348 4>;
-		label = "spss";
-		qcom,tx-ring-size = <0x400>;
-		qcom,rx-ring-size = <0x400>;
+	intsp: qcom,qsee_irq {
+		compatible = "qcom,sm8150-qsee-irq";
+
+		syscon = <&sp_scsr_block>;
+		interrupts = <0 348 IRQ_TYPE_LEVEL_HIGH>,
+			     <0 349 IRQ_TYPE_LEVEL_HIGH>;
+
+		interrupt-names = "sp_ipc0",
+				  "sp_ipc1";
+
+		interrupt-controller;
+		#interrupt-cells = <3>;
 	};
 
-	qmp_aop: qcom,qmp-aop@c300000 {
-		compatible = "qcom,qmp-mbox";
-		label = "aop";
-		reg = <0xc300000 0x100000>,
-			<0x1799000c 0x4>;
-		reg-names = "msgram", "irq-reg-base";
-		qcom,irq-mask = <0x1>;
-		interrupts = <0 389 1>;
-		priority = <0>;
-		mbox-desc-offset = <0x0>;
-		#mbox-cells = <1>;
+	qcom,qsee_irq_bridge {
+		compatible = "qcom,qsee-ipc-irq-bridge";
+
+		qcom,qsee-ipc-irq-spss {
+			qcom,dev-name = "qsee_ipc_irq_spss";
+			label = "spss";
+			interrupt-parent = <&intsp>;
+			interrupts = <1 0 IRQ_TYPE_LEVEL_HIGH>;
+		};
 	};
 
 	apps_rsc: mailbox@179e0000 {
