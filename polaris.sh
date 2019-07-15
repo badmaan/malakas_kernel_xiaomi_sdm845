@@ -14,8 +14,12 @@ export CROSS_COMPILE_ARM32=~/TOOLCHAIN/arm-linux-gnueabi/bin/arm-linux-gnueabi-
 #export LDLLD=~/TOOLCHAIN/clang/bin/
 export KBUILD_BUILD_USER=thanas
 export KBUILD_BUILD_HOST=MLX
+export PATH=~/bin:$PATH
 export USE_CCACHE=1
+export USE_PREBUILT_CACHE=1
+export PREBUILT_CACHE_DIR=~/.ccache
 export CCACHE_DIR=~/.ccache
+ccache -M 100G
 mkdir -p out
 make O=out clean
 make O=out malakas_polaris_defconfig
