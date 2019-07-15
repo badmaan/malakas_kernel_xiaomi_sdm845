@@ -303,7 +303,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe 
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe
 HOSTCXXFLAGS = -Ofast
 
 # Decide whether to build built-in, modular, or both.
@@ -346,6 +346,8 @@ LD		= $(CROSS_COMPILE)ld
 LDGOLD		= $(CROSS_COMPILE)ld.gold
 LDLLD		= ld.lld
 CC		= $(CROSS_COMPILE)gcc
+LDGOLD		= $(CROSS_COMPILE)ld.gold
+LDLLD		= ld.lld
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -395,14 +397,10 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -std=gnu89 \
-		   -pipe \
-		   -Ofast \
-		   -fcx-fortran-rules
-		   
-		   
+		   -std=gnu89
+
 # Optimization for sdm845
-KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55+crypto+sve -Wno-attribute-alias 
+KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55+crc+crypto -Wno-attribute-alias
 
 # This doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
@@ -420,7 +418,7 @@ GCC_PLUGINS_CFLAGS :=
 
 # Add Some optimization flags for clang
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS   += -ffast-math -march=armv8.3-a+crypto+sve -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
+KBUILD_CFLAGS   += -ffast-math -march=armv8.3-a+crypto -mtune=cortex-a55
 endif
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
@@ -789,7 +787,7 @@ KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
 KBUILD_CFLAGS	+= -Ofast
 ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS	+= -Ofast -Wno-attribute-alias -ffast-math -funsafe-math-optimizations -mcpu=cortex-a75.cortex-a55+crypto+sve -mtune=cortex-a75.cortex-a55
+KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
 endif
 endif
 endif
