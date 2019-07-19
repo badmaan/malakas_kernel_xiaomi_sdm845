@@ -303,7 +303,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe 
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -ftree-vectorize -floop-nest-optimize -fgraphite-identity 
 HOSTCXXFLAGS = -Ofast
 
 # Decide whether to build built-in, modular, or both.
@@ -398,9 +398,9 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89 \
 		   -pipe \
 		   -Ofast \
-		   -fcx-fortran-rules
-		   
-		   
+		   -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
+		   -ftree-vectorize -floop-nest-optimize -fgraphite-identity 
+ 	   
 # Optimization for sdm845
 KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55+crypto+sve -Wno-attribute-alias 
 
