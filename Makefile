@@ -346,8 +346,6 @@ LD		= $(CROSS_COMPILE)ld
 LDGOLD		= $(CROSS_COMPILE)ld.gold
 LDLLD		= ld.lld
 CC		= $(CROSS_COMPILE)gcc
-LDGOLD		= $(CROSS_COMPILE)ld.gold
-LDLLD		= ld.lld
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -418,7 +416,15 @@ GCC_PLUGINS_CFLAGS :=
 
 # Add Some optimization flags for clang
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS   += -ffast-math -march=armv8.3-a+crypto -mtune=cortex-a55
+KBUILD_CFLAGS   += -Ofast -ffast-math -march=armv8.3-a+crypto -mtune=cortex-a55
+KBUILD_CFLAGS	+= -mllvm -polly \
+		   -mllvm -polly-run-dce \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-opt-fusion=max \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-detect-keep-going \
+		   -mllvm -polly-vectorizer=stripmine \
+		   -mllvm -polly-invariant-load-hoisting
 endif
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
