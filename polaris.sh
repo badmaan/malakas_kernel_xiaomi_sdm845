@@ -7,8 +7,8 @@ export ARCH=arm64 && export SUBARCH=arm64 malakas_polaris_defconfig
 #make ARCH=arm64 oldconfig
 export CROSS_COMPILE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=~/TOOLCHAIN/arm-linux-gnueabi/bin/arm-linux-gnueabi-
-#export CC=~/TOOLCHAIN/clang/bin/clang 
-#export CLANG_TRIPLE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+export CC=~/TOOLCHAIN/clang/bin/clang 
+export CLANG_TRIPLE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
 #export LD=~/TOOLCHAIN/aarch64-linux-gnu/aarch64-linux-gnu/bin/
 #export LDGOLD=~/TOOLCHAIN/aarch64-linux-gnu/aarch64-linux-gnu/bin/
 #export LDLLD=~/TOOLCHAIN/clang/bin/
