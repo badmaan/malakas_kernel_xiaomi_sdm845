@@ -416,7 +416,7 @@ GCC_PLUGINS_CFLAGS :=
 
 # Add Some optimization flags for clang
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS   += -Ofast -ffast-math -march=armv8.3-a+crypto -mtune=cortex-a55
+KBUILD_CFLAGS   += -Ofast -ffast-math -march=armv8.3-a+crypto -mtune=cortex-a75.cortex-a55
 KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-run-dce \
 		   -mllvm -polly-run-inliner \
