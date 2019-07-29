@@ -622,7 +622,6 @@ static void *alloc_item_nonsecure(unsigned int id, unsigned int size_in)
 	struct smem_heap_entry *toc = shared->heap_toc;
 	uint32_t free_offset, heap_remaining;
 	void *ret = NULL;
-	uint32_t p_size;
 
 	heap_remaining = shared->heap_info.heap_remaining;
 	free_offset = shared->heap_info.free_offset;
@@ -974,7 +973,6 @@ unsigned int smem_get_free_space(unsigned int to_proc)
 		return UINT_MAX;
 	}
 
-	toc = smem_get_toc();
 	if (partitions[to_proc].offset) {
 		if (unlikely(OVERFLOW_ADD_UNSIGNED(uintptr_t,
 					(uintptr_t)smem_areas[0].virt_addr,
