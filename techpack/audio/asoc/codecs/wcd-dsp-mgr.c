@@ -1204,8 +1204,7 @@ static int wdsp_mgr_parse_dt_entries(struct wdsp_mgr_priv *wdsp)
 
 	ret = of_property_read_string(dev->of_node, "qcom,img-filename",
 				      &wdsp->img_fname);
-
-	wdsp->img_fname = "cpe_intl";
+	wdsp->img_fname  = "cpe_intl";
 	pr_info("%s: using global wdsp fw: %s.\n", __func__, wdsp->img_fname);
 
 	if (ret < 0) {
