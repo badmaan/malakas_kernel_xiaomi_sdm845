@@ -3275,8 +3275,7 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			ultrasound_power_get, ultrasound_power_put),
 
 	SOC_SINGLE_EXT("USB Headset Direction", 0, 0, UINT_MAX, 0,
-			usbhs_direction_get, NULL),
-
+					usbhs_direction_get, NULL),
 	SOC_SINGLE_MULTI_EXT("TDM Slot Map", SND_SOC_NOPM, 0, 255, 0, 4,
 	NULL, tdm_slot_map_put),
 };
