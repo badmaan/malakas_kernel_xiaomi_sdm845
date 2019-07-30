@@ -884,7 +884,7 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 	struct kgsl_memobj_node *ib;
 	unsigned int numibs = 0;
 	unsigned int *link;
-	unsigned int link_onstack[SZ_256] __aligned(8);
+	unsigned int link_onstack[SZ_256] __aligned(sizeof(long));
 	unsigned int *cmds;
 	struct kgsl_context *context;
 	struct adreno_context *drawctxt;
@@ -1005,15 +1005,14 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		if (gpudev->preemption_yield_enable)
 			dwords += 8;
 
-	/*
-	 * Prior to SQE FW version 1.49, there was only one marker for
-	 * both preemption and IFPC. Only include the IB1LIST markers if
-	 * we are using a firmware that supports them.
-	 */
-	if (gpudev->set_marker && numibs && adreno_is_a6xx(adreno_dev) &&
-			((fw->version & 0xFFF) >= 0x149)) {
-		set_ib1list_marker = true;
-		dwords += 4;
+	if (dwords <= ARRAY_SIZE(link_onstack)) {
+		link = link_onstack;
+	} else {
+		link = kmalloc(sizeof(unsigned int) * dwords, GFP_KERNEL);
+		if (!link) {
+			ret = -ENOMEM;
+			goto done;
+		}
 	}
 
 	if (gpudev->ccu_invalidate)
@@ -1155,7 +1154,7 @@ done:
 	trace_kgsl_issueibcmds(device, context->id, numibs, drawobj->timestamp,
 			drawobj->flags, ret, drawctxt->type);
 
-	if (unlikely(link != link_onstack))
+	if (link != link_onstack)
 		kfree(link);
 	return ret;
 }
