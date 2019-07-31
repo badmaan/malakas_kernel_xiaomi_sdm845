@@ -21,6 +21,9 @@
 #include <asm/cpu.h>
 #include <asm/cputype.h>
 #include <asm/cpufeature.h>
+#include <uapi/linux/psci.h>
+#include <linux/arm-smccc.h>
+#include <linux/psci.h>
 
 #if defined(CONFIG_ARM64_SSBD) || defined(CONFIG_PSCI_BP_HARDENING)
 #include <linux/arm-smccc.h>
