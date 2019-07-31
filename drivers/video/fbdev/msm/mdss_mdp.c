@@ -2201,9 +2201,16 @@ static u32 mdss_mdp_scaler_init(struct mdss_data_type *mdata,
 		}
 		mdata->scaler_off->dest_base = mdata->mdss_io.base +
 			prop_val;
-		mdata->scaler_off->ndest_scalers =
-			mdss_mdp_parse_dt_prop_len(mdata->pdev,
-					"qcom,mdss-dest-scalers-off");
+
+		if (!of_find_property(node, "qcom,mdss-dest-scaler-off", &len)
+				|| (len < 1)) {
+			pr_err("find property %s failed ret %d\n",
+					"qcom,mdss-dest-scaler-off", ret);
+			return -EINVAL;
+		}
+		mdata->scaler_off->ndest_scalers = len/sizeof(u32);
+		BUG_ON(mdata->scaler_off->ndest_scalers > 2);
+
 		mdata->scaler_off->dest_scaler_off =
 			devm_kzalloc(&mdata->pdev->dev, sizeof(u32) *
 					mdata->scaler_off->ndest_scalers,

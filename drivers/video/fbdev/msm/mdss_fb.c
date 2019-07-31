@@ -4582,6 +4582,69 @@ err:
 	return ret;
 }
 
+static int __mdss_fb_copy_destscaler_data(struct fb_info *info,
+		struct mdp_layer_commit *commit,
+		struct mdp_destination_scaler_data *ds_data,
+		struct mdp_scale_data_v2 *scale_data)
+{
+	int    i = 0;
+	int    ret = 0;
+	struct mdp_destination_scaler_data __user *ds_data_user;
+	void __user *scale_data_user;
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	struct mdss_data_type *mdata;
+
+	if (!mfd || !mfd->mdp.private1) {
+		pr_err("mfd is NULL or operation not permitted\n");
+		return -EINVAL;
+	}
+
+	mdata = mfd_to_mdata(mfd);
+	if (!mdata) {
+		pr_err("mdata is NULL or not initialized\n");
+		return -EINVAL;
+	}
+
+	if (commit->commit_v1.dest_scaler_cnt >
+			mdata->scaler_off->ndest_scalers) {
+		pr_err("Commit destination scaler cnt larger than HW setting, commit cnt=%d\n",
+				commit->commit_v1.dest_scaler_cnt);
+		return -EINVAL;
+	}
+
+	ds_data_user = (struct mdp_destination_scaler_data *)
+		commit->commit_v1.dest_scaler;
+	ret = copy_from_user(ds_data, ds_data_user,
+		commit->commit_v1.dest_scaler_cnt * sizeof(*ds_data));
+	if (ret) {
+		pr_err("dest scaler data copy from user failed\n");
+		return ret;
+	}
+
+	commit->commit_v1.dest_scaler = ds_data;
+
+	for (i = 0; i < commit->commit_v1.dest_scaler_cnt; i++) {
+		if (!ds_data[i].scale)
+			continue;
+
+		scale_data_user = to_user_ptr(ds_data[i].scale);
+		ds_data[i].scale = to_user_u64(&scale_data[i]);
+		if (ds_data[i].flags & (MDP_DESTSCALER_SCALE_UPDATE |
+					MDP_DESTSCALER_ENHANCER_UPDATE)) {
+			ret = copy_from_user(scale_data + i, scale_data_user,
+					     sizeof(*scale_data));
+			if (ret) {
+				pr_err("scale data copy from user failed\n");
+				return ret;
+			}
+		} else {
+			memset(scale_data + i, 0, sizeof(*scale_data));
+		}
+	}
+
+	return ret;
+}
+
 static int mdss_fb_atomic_commit_ioctl(struct fb_info *info,
 	unsigned long *argp, struct file *file)
 {
@@ -4592,9 +4655,9 @@ static int mdss_fb_atomic_commit_ioctl(struct fb_info *info,
 	struct mdp_input_layer __user *input_layer_list;
 	struct mdp_output_layer *output_layer = NULL;
 	struct mdp_output_layer __user *output_layer_user;
-	struct mdp_frc_info *frc_info = NULL;
-	struct mdp_frc_info __user *frc_info_user;
-	struct msm_fb_data_type *mfd;
+	struct mdp_destination_scaler_data __user *ds_data_user;
+	struct mdp_destination_scaler_data ds_data[2];
+	struct mdp_scale_data_v2 scale_data[2];
 
 	ret = copy_from_user(&commit, argp, sizeof(struct mdp_layer_commit));
 	if (ret) {
@@ -4676,24 +4739,15 @@ static int mdss_fb_atomic_commit_ioctl(struct fb_info *info,
 		}
 	}
 
-	/* Copy Deterministic Frame Rate Control info from userspace */
-	frc_info_user = commit.commit_v1.frc_info;
-	if (frc_info_user) {
-		frc_info = kzalloc(sizeof(struct mdp_frc_info), GFP_KERNEL);
-		if (!frc_info) {
-			pr_err("unable to allocate memory for frc\n");
-			ret = -ENOMEM;
+	ds_data_user = commit.commit_v1.dest_scaler;
+	if ((ds_data_user) &&
+		(commit.commit_v1.dest_scaler_cnt)) {
+		ret = __mdss_fb_copy_destscaler_data(info, &commit, ds_data,
+						     scale_data);
+		if (ret) {
+			pr_err("copy dest scaler failed\n");
 			goto err;
 		}
-
-		ret = copy_from_user(frc_info, frc_info_user,
-			sizeof(struct mdp_frc_info));
-		if (ret) {
-			pr_err("frc info copy from user failed\n");
-			goto frc_err;
-		}
-
-		commit.commit_v1.frc_info = frc_info;
 	}
 
 	ATRACE_BEGIN("ATOMIC_COMMIT");
