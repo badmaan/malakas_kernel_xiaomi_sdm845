@@ -470,6 +470,8 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 			i = process_info(tmp_info, sg, 0, 0, i);
 			free_info(tmp_info, info_onstack,
 				  ARRAY_SIZE(info_onstack));
+		} else {
+			BUG();
 		}
 		sg = sg_next(sg);
 
@@ -832,7 +834,7 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *data)
 	if (!ion_page_info_pool)
 		return ERR_PTR(-ENOMEM);
 
-	heap = kzalloc(sizeof(*heap), GFP_KERNEL);
+	heap = kzalloc(sizeof(struct ion_system_heap), GFP_KERNEL);
 	if (!heap)
 		goto err_free_page_info_pool;
 
