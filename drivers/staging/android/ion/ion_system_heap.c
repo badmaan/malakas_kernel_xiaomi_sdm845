@@ -271,6 +271,9 @@ static int alloc_from_pool_preferred(struct page_info *info,
 	struct page *page;
 	int i;
 
+	if (buffer->flags & ION_FLAG_POOL_FORCE_ALLOC)
+		goto force_alloc;
+
 	for (i = 0; i < num_orders; i++) {
 		if (size < order_to_size(orders[i]))
 			continue;
@@ -297,6 +300,7 @@ static int alloc_from_pool_preferred(struct page_info *info,
 		return 0;
 	}
 
+force_alloc:
 	return alloc_largest_available(info, heap, buffer, size, max_order);
 }
 
