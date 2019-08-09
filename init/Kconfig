@@ -1439,8 +1439,7 @@ config STUNE_ASSIST
 	depends on CGROUP_SCHEDTUNE
 	depends on ANDROID
 	help
-	  This option enables the configuration of default SchedTune
-	  parameters from kernel.
+	  This option enables in-kernel overrides for SchedTune values.
 
 	  Say N if unsure.
 
