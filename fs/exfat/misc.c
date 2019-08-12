@@ -42,37 +42,6 @@
 #include "exfat.h"
 #include "version.h"
 
-/*************************************************************************
- * FUNCTIONS WHICH HAS KERNEL VERSION DEPENDENCY
- *************************************************************************/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
-#define CURRENT_TIME_SEC	timespec_trunc(current_kernel_time(), NSEC_PER_SEC)
-#endif
-
-void exfat_uevent_uninit(void)
-{
-	kobject_del(&exfat_uevent_kobj);
-	memset(&exfat_uevent_kobj, 0, sizeof(struct kobject));
-}
-
-void exfat_uevent_ro_remount(struct super_block *sb)
-{
-	struct block_device *bdev = sb->s_bdev;
-	dev_t bd_dev = bdev ? bdev->bd_dev : 0;
-
-	char major[16], minor[16];
-	char *envp[] = { major, minor, NULL };
-
-	snprintf(major, sizeof(major), "MAJOR=%d", MAJOR(bd_dev));
-	snprintf(minor, sizeof(minor), "MINOR=%d", MINOR(bd_dev));
-
-	kobject_uevent_env(&exfat_uevent_kobj, KOBJ_CHANGE, envp);
-
-	ST_LOG("[EXFAT](%s[%d:%d]): Uevent triggered\n",
-			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
-}
-#endif
-
 /*
  * exfat_fs_error reports a file system problem that might indicate fa data
  * corruption/inconsistency. Depending on 'errors' mount option the
@@ -258,9 +227,10 @@ void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec *ts,
 
 TIMESTAMP_T *tm_now(struct exfat_sb_info *sbi, TIMESTAMP_T *tp)
 {
-	struct timespec_compat ts;
+	struct timespec ts;
 	DATE_TIME_T dt;
 
+	ktime_get_real_ts(&ts);
 	exfat_time_unix2fat(sbi, &ts, &dt);
 
 	tp->year = dt.Year;
