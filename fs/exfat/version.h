@@ -22,8 +22,4 @@
 /*  PURPOSE : exFAT File Manager                                        */
 /*                                                                      */
 /************************************************************************/
-
-#define EXFAT_BASE_VERSION	"2.2.0"
-#define EXFAT_EXTRAVERSION	"1"
-#define EXFAT_VARIANT		"arter97"
-#define EXFAT_VERSION		EXFAT_BASE_VERSION "-" EXFAT_EXTRAVERSION EXFAT_VARIANT
+#define EXFAT_VERSION	"2.1.10"

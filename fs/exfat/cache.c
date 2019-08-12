@@ -157,6 +157,10 @@ static s32 __fcache_ent_flush(struct super_block *sb, cache_ent_t *bp, u32 sync)
 
 	if (!(bp->flag & DIRTYBIT))
 		return 0;
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	// Make buffer dirty (XXX: Naive impl.)
+	if (write_sect(sb, bp->sec, bp->bh, 0))
+		return -EIO;
 
 	sbi = EXFAT_SB(sb);
 	if (sbi->options.delayed_meta) {
@@ -234,6 +238,23 @@ u8 *fcache_getblk(struct super_block *sb, u64 sec)
 
 	return bp->bh->b_data;
 }
+
+static inline int __mark_delayed_dirty(struct super_block *sb, cache_ent_t *bp)
+{
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
+
+	if (fsi->vol_type == EXFAT)
+		return -ENOTSUPP;
+
+	bp->flag |= DIRTYBIT;
+	return 0;
+#else
+	return -ENOTSUPP;
+#endif
+}
+
+
 
 s32 fcache_modify(struct super_block *sb, u64 sec)
 {
@@ -388,7 +409,7 @@ static cache_ent_t *__fcache_find(struct super_block *sb, u64 sec)
 			/*
 			 * patch 1.2.4 : for debugging
 			 */
-			WARN(!bp->bh, "exFAT: fcache has no bh. "
+			WARN(!bp->bh, "[EXFAT] fcache has no bh. "
 					  "It will make system panic.\n");
 
 			touch_buffer(bp->bh);
@@ -403,18 +424,18 @@ static cache_ent_t *__fcache_get(struct super_block *sb)
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	FS_INFO_T *fsi = &(sbi->fsi);
 	cache_ent_t *bp;
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	bp = fsi->fcache.lru_list.prev;
-	if (sbi->options.delayed_meta) {
-		while (bp->flag & DIRTYBIT) {
-			cache_ent_t *bp_prev = bp->prev;
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	while (bp->flag & DIRTYBIT) {
+		cache_ent_t *bp_prev = bp->prev;
 
-			bp = bp_prev;
-			if (bp == &fsi->fcache.lru_list) {
-				DMSG("BD: fat cache flooding\n");
-				fcache_flush(sb, 0);	// flush all dirty FAT caches
-				bp = fsi->fcache.lru_list.prev;
-			}
+		bp = bp_prev;
+		if (bp == &fsi->fcache.lru_list) {
+			DMSG("BD: fat cache flooding\n");
+			fcache_flush(sb, 0);	// flush all dirty FAT caches
+			bp = fsi->fcache.lru_list.prev;
 		}
 	}
 //	if (bp->flag & DIRTYBIT)
@@ -502,13 +523,11 @@ static s32 __dcache_ent_flush(struct super_block *sb, cache_ent_t *bp, u32 sync)
 
 	if (!(bp->flag & DIRTYBIT))
 		return 0;
-
-	sbi = EXFAT_SB(sb);
-	if (sbi->options.delayed_meta) {
-		// Make buffer dirty (XXX: Naive impl.)
-		if (write_sect(sb, bp->sec, bp->bh, 0))
-			return -EIO;
-	}
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	// Make buffer dirty (XXX: Naive impl.)
+	if (write_sect(sb, bp->sec, bp->bh, 0))
+		return -EIO;
+#endif
 	bp->flag &= ~(DIRTYBIT);
 
 	if (sync)
@@ -590,7 +609,12 @@ s32 dcache_modify(struct super_block *sb, u64 sec)
 		exfat_fs_error(sb, "Can`t find dcache (sec 0x%016llx)", sec);
 		return -EIO;
 	}
-
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	if (EXFAT_SB(sb)->fsi.vol_type != EXFAT) {
+		bp->flag |= DIRTYBIT;
+		return 0;
+	}
+#endif
 	ret = write_sect(sb, sec, bp->bh, 0);
 
 	if (ret) {
@@ -633,17 +657,16 @@ s32 dcache_release(struct super_block *sb, u64 sec)
 {
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(sbi->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	bp = __dcache_find(sb, sec);
 	if (unlikely(!bp))
 		return -ENOENT;
 
-	if (sbi->options.delayed_meta) {
-		if (bp->flag & DIRTYBIT) {
-			if (write_sect(sb, bp->sec, bp->bh, 0))
-				return -EIO;
-		}
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	if (bp->flag & DIRTYBIT) {
+		if (write_sect(sb, bp->sec, bp->bh, 0))
+			return -EIO;
 	}
 
 	bp->sec = ~0;
@@ -663,7 +686,7 @@ s32 dcache_release_all(struct super_block *sb)
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	s32 ret = 0;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(sbi->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	s32 dirtycnt = 0;
 
 	/* Connect list elements:
@@ -677,12 +700,11 @@ s32 dcache_release_all(struct super_block *sb)
 
 	bp = fsi->dcache.lru_list.next;
 	while (bp != &fsi->dcache.lru_list) {
-		if (sbi->options.delayed_meta) {
-			if (bp->flag & DIRTYBIT) {
-				dirtycnt++;
-				if (write_sect(sb, bp->sec, bp->bh, 0))
-					ret = -EIO;
-			}
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+		if (bp->flag & DIRTYBIT) {
+			dirtycnt++;
+			if (write_sect(sb, bp->sec, bp->bh, 0))
+				ret = -EIO;
 		}
 
 		bp->sec = ~0;
@@ -705,7 +727,7 @@ s32 dcache_flush(struct super_block *sb, u32 sync)
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	s32 ret = 0;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(sbi->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	s32 dirtycnt = 0;
 	s32 keepcnt = 0;
 
@@ -723,12 +745,11 @@ s32 dcache_flush(struct super_block *sb, u32 sync)
 	bp = fsi->dcache.lru_list.next;
 	while (bp != &fsi->dcache.lru_list) {
 		if (bp->flag & DIRTYBIT) {
-			if (sbi->options.delayed_meta) {
-				// Make buffer dirty (XXX: Naive impl.)
-				if (write_sect(sb, bp->sec, bp->bh, 0)) {
-					ret = -EIO;
-					break;
-				}
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+			// Make buffer dirty (XXX: Naive impl.)
+			if (write_sect(sb, bp->sec, bp->bh, 0)) {
+				ret = -EIO;
+				break;
 			}
 
 			bp->flag &= ~(DIRTYBIT);
@@ -767,9 +788,12 @@ static cache_ent_t *__dcache_get(struct super_block *sb)
 {
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(sbi->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	bp = fsi->dcache.lru_list.prev;
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	while (bp->flag & (DIRTYBIT | LOCKBIT)) {
+		cache_ent_t *bp_prev = bp->prev; // hold prev
 
 	if (sbi->options.delayed_meta) {
 		while (bp->flag & (DIRTYBIT | LOCKBIT)) {

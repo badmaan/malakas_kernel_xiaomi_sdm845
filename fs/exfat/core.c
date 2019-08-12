@@ -110,7 +110,6 @@ static s32 check_type_size(void)
 static s32 __fs_set_vol_flags(struct super_block *sb, u16 new_flag, s32 always_sync)
 {
 	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
-	pbr64_t *bpb;
 	s32 err;
 	s32 sync = 0;
 
@@ -159,6 +158,22 @@ static s32 fs_set_vol_flags(struct super_block *sb, u16 new_flag)
 s32 fscore_set_vol_flags(struct super_block *sb, u16 new_flag, s32 always_sync)
 {
 	return __fs_set_vol_flags(sb, new_flag, always_sync);
+}
+
+static inline s32 __fs_meta_sync(struct super_block *sb, s32 do_sync)
+{
+#ifdef CONFIG_EXFAT_DELAYED_META_DIRTY
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
+
+	if (fsi->vol_type != EXFAT) {
+		MMSG("meta flush in fs_sync(sync=%d)\n", do_sync);
+		fcache_flush(sb, 0);
+		dcache_flush(sb, 0);
+	}
+#else
+	/* DO NOTHING */
+#endif
+	return 0;
 }
 
 static s32 fs_sync(struct super_block *sb, s32 do_sync)
@@ -857,6 +872,7 @@ static s32 find_empty_entry(struct inode *inode, CHAIN_T *p_dir, s32 num_entries
 } /* end of find_empty_entry */
 
 #define EXFAT_MIN_SUBDIR	(2)
+static const char *dot_name[EXFAT_MIN_SUBDIR] = { DOS_CUR_DIR_NAME, DOS_PAR_DIR_NAME };
 
 static s32 __count_dos_name_entries(struct super_block *sb, CHAIN_T *p_dir, u32 type, u32 *dotcnt)
 {
@@ -896,6 +912,12 @@ static s32 __count_dos_name_entries(struct super_block *sb, CHAIN_T *p_dir, u32 
 				continue;
 
 			count++;
+			if (check_dot && (i < EXFAT_MIN_SUBDIR)) {
+				BUG_ON(fsi->vol_type == EXFAT);
+				/* 11 is DOS_NAME_LENGTH */
+				if (!strncmp(ep->dummy, dot_name[i], 11))
+					(*dotcnt)++;
+			}
 		}
 
 		/* FAT16 root_dir */
@@ -971,6 +993,54 @@ s32 check_dir_empty(struct super_block *sb, CHAIN_T *p_dir)
 	return 0;
 }
 
+/*
+ *  Name Conversion Functions
+ */
+#ifdef CONFIG_EXFAT_ALLOW_LOOKUP_LOSSY_SFN
+ /* over name length only */
+#define NEED_INVALIDATE_SFN(x)	((x) & NLS_NAME_OVERLEN)
+#else
+ /* all lossy case */
+#define NEED_INVALIDATE_SFN(x)	(x)
+#endif
+
+/* NOTE :
+ * We should keep shortname code compatible with v1.0.15 or lower
+ * So, we try to check ext-only-name at create-mode only.
+ *
+ * i.e. '.mtp' ->
+ * v1.0.15 : '        MTP' with name_case, 0x10
+ * v1.1.0  : 'MT????~?' with name_case, 0x00 and longname.
+ */
+static inline void preprocess_ext_only_sfn(s32 lookup, u16 first_char, DOS_NAME_T *p_dosname, s32 *lossy)
+{
+#ifdef CONFIG_EXFAT_RESTRICT_EXT_ONLY_SFN
+	int i;
+	/* check ext-only-name at create-mode */
+	if (*lossy || lookup || (first_char != (u16)'.'))
+		return;
+
+	p_dosname->name_case = 0xFF;
+
+	/* move ext-name to base-name */
+	for (i = 0; i < 3; i++) {
+		p_dosname->name[i] = p_dosname->name[8+i];
+		if (p_dosname->name[i] == ' ')
+			p_dosname->name[i] = '_';
+	}
+
+	/* fill remained space with '_' */
+	for (i = 3; i < 8; i++)
+		p_dosname->name[i] = '_';
+
+	/* eliminate ext-name */
+	for (i = 8; i < 11; i++)
+		p_dosname->name[i] = ' ';
+
+	*lossy = NLS_NAME_LOSSY;
+#endif /* CONFIG_EXFAT_CAN_CREATE_EXT_ONLY_SFN */
+}
+
 /* input  : dir, uni_name
  * output : num_of_entry, dos_name(format : aaaaaa~1.bbb)
  */
@@ -978,7 +1048,8 @@ static s32 get_num_entries_and_dos_name(struct super_block *sb, CHAIN_T *p_dir,
 					UNI_NAME_T *p_uniname, s32 *entries,
 					DOS_NAME_T *p_dosname, s32 lookup)
 {
-	s32 num_entries;
+	s32 ret, num_entries, lossy = NLS_NAME_NO_LOSSY;
+	s8 **r;
 	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	/* Init null char. */
@@ -1499,6 +1570,7 @@ s32 fscore_mount(struct super_block *sb)
 	struct buffer_head *tmp_bh = NULL;
 	struct gendisk *disk = sb->s_bdev->bd_disk;
 	struct hd_struct *part = sb->s_bdev->bd_part;
+	struct exfat_mount_options *opts = &(EXFAT_SB(sb)->options);
 	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	/* initialize previous I/O error */
@@ -1539,9 +1611,46 @@ s32 fscore_mount(struct super_block *sb)
 	}
 
 	/* fill fs_struct */
-	if (!is_exfat(p_pbr)) {
-		ret = -EINVAL;
-		goto free_bh;
+	if (is_exfat(p_pbr)) {
+		if (opts->fs_type && opts->fs_type != FS_TYPE_EXFAT) {
+			exfat_log_msg(sb, KERN_ERR,
+				"not specified filesystem type "
+				"(media:exfat, opts:%s)",
+				FS_TYPE_STR[opts->fs_type]);
+			ret = -EINVAL;
+			goto free_bh;
+		}
+		/* set maximum file size for exFAT */
+		sb->s_maxbytes = 0x7fffffffffffffffLL;
+		opts->improved_allocation = 0;
+		opts->defrag = 0;
+		ret = mount_exfat(sb, p_pbr);
+	} else if (is_fat32(p_pbr)) {
+		if (opts->fs_type && opts->fs_type != FS_TYPE_VFAT) {
+			exfat_log_msg(sb, KERN_ERR,
+				"not specified filesystem type "
+				"(media:vfat, opts:%s)",
+				FS_TYPE_STR[opts->fs_type]);
+			ret = -EINVAL;
+			goto free_bh;
+		}
+		/* set maximum file size for FAT */
+		sb->s_maxbytes = 0xffffffff;
+		ret = mount_fat32(sb, p_pbr);
+	} else {
+		if (opts->fs_type && opts->fs_type != FS_TYPE_VFAT) {
+			exfat_log_msg(sb, KERN_ERR,
+				"not specified filesystem type "
+				"(media:vfat, opts:%s)",
+				FS_TYPE_STR[opts->fs_type]);
+			ret = -EINVAL;
+			goto free_bh;
+		}
+		/* set maximum file size for FAT */
+		sb->s_maxbytes = 0xffffffff;
+		opts->improved_allocation = 0;
+		opts->defrag = 0;
+		ret = mount_fat16(sb, p_pbr);
 	}
 
 	/* set maximum file size for exFAT */
@@ -1557,7 +1666,9 @@ free_bh:
 
 	/* warn misaligned data data start sector must be a multiple of clu_size */
 	exfat_log_msg(sb, KERN_INFO,
+		"detected volume info     : %s "
 		"(bps : %lu, spc : %u, data start : %llu, %s)",
+		exfat_get_vol_type_str(fsi->vol_type),
 		sb->s_blocksize, fsi->sect_per_clus, fsi->data_start_sector,
 		(fsi->data_start_sector & (fsi->sect_per_clus - 1)) ?
 		"misaligned" : "aligned");
@@ -2178,6 +2289,9 @@ s32 fscore_truncate(struct inode *inode, u64 old_size, u64 new_size)
 	clu.size = num_clusters_phys;
 	clu.flags = fid->flags;
 
+	/* For bigdata */
+	exfat_statistics_set_trunc(clu.flags, &clu);
+
 	if (new_size > 0) {
 		/* Truncate FAT chain num_clusters after the first cluster
 		 * num_clusters = min(new, phys);
@@ -2261,6 +2375,18 @@ s32 fscore_truncate(struct inode *inode, u64 old_size, u64 new_size)
 		if (!es)
 			return -EIO;
 		ep2 = ep+1;
+
+		if (fsi->vol_type == EXFAT) {
+			es = get_dentry_set_in_dir(sb, &(fid->dir), fid->entry, ES_ALL_ENTRIES, &ep);
+			if (!es)
+				return -EIO;
+			ep2 = ep+1;
+		} else {
+			ep = get_dentry_in_dir(sb, &(fid->dir), fid->entry, &sector);
+			if (!ep)
+				return -EIO;
+			ep2 = ep;
+		}
 
 		fsi->fs_func->set_entry_time(ep, tm_now(EXFAT_SB(sb), &tm), TM_MODIFY);
 		fsi->fs_func->set_entry_attr(ep, fid->attr);
@@ -2380,6 +2506,7 @@ s32 fscore_rename(struct inode *old_parent_inode, FILE_ID_T *fid,
 	if (!ep)
 		return -EIO;
 
+#ifdef CONFIG_EXFAT_CHECK_RO_ATTR
 	if (fsi->fs_func->get_entry_attr(ep) & ATTR_READONLY)
 		return -EPERM;
 
@@ -2513,6 +2640,8 @@ s32 fscore_remove(struct inode *inode, FILE_ID_T *fid)
 	if (!ep)
 		return -EIO;
 
+
+#ifdef CONFIG_EXFAT_CHECK_RO_ATTR
 	if (fsi->fs_func->get_entry_attr(ep) & ATTR_READONLY)
 		return -EPERM;
 
@@ -2661,7 +2790,21 @@ s32 fscore_read_inode(struct inode *inode, DIR_ENTRY_T *info)
 		if (count < 0)
 			return -EIO;
 
-		count += EXFAT_MIN_SUBDIR;
+		if (fsi->vol_type == EXFAT) {
+			count += EXFAT_MIN_SUBDIR;
+		} else {
+			/*
+			 * if directory has been corrupted,
+			 * we have to adjust subdir count.
+			 */
+			BUG_ON(dotcnt > EXFAT_MIN_SUBDIR);
+			if (dotcnt < EXFAT_MIN_SUBDIR) {
+				EMSG("%s: contents of the directory has been "
+				"corrupted (parent clus : %08x, idx : %d)",
+				__func__, fid->dir.dir, fid->entry);
+			}
+			count += (EXFAT_MIN_SUBDIR  - dotcnt);
+		}
 		info->NumSubdirs = count;
 	}
 
@@ -2857,6 +3000,14 @@ s32 fscore_map_clus(struct inode *inode, u32 clu_offset, u32 *clu, int dest)
 			return -EIO;
 		}
 
+		/* Reserved cluster dec. */
+		// XXX: Inode DA flag needed
+		if (EXFAT_SB(sb)->options.improved_allocation & EXFAT_ALLOC_DELAY) {
+			BUG_ON(reserved_clusters < num_to_be_allocated);
+			reserved_clusters -= num_to_be_allocated;
+
+		}
+
 		/* (2) append to the FAT chain */
 		if (IS_CLUS_EOF(last_clu)) {
 			if (new_clu.flags == 0x01)
@@ -2904,8 +3055,14 @@ s32 fscore_map_clus(struct inode *inode, u32 clu_offset, u32 *clu, int dest)
 
 		} /* end of if != DIR_DELETED */
 
-		/* add number of new blocks to inode */
-		inode->i_blocks += num_to_be_allocated << (fsi->cluster_size_bits - sb->s_blocksize_bits);
+
+		/* add number of new blocks to inode (non-DA only) */
+		if (!(EXFAT_SB(sb)->options.improved_allocation & EXFAT_ALLOC_DELAY)) {
+			inode->i_blocks += num_to_be_allocated << (fsi->cluster_size_bits - sb->s_blocksize_bits);
+		} else {
+			// DA의 경우, i_blocks가 이미 증가해있어야 함.
+			BUG_ON(clu_offset >= (inode->i_blocks >> (fsi->cluster_size_bits - sb->s_blocksize_bits)));
+		}
 #if 0
 		fs_sync(sb, 0);
 		fs_set_vol_flags(sb, VOL_CLEAN);
@@ -2982,6 +3139,7 @@ s32 fscore_unlink(struct inode *inode, FILE_ID_T *fid)
 	if (!ep)
 		return -EIO;
 
+#ifdef CONFIG_EXFAT_CHECK_RO_ATTR
 	if (EXFAT_SB(sb)->fsi.fs_func->get_entry_attr(ep) & ATTR_READONLY)
 		return -EPERM;
 
@@ -3220,6 +3378,7 @@ s32 fscore_rmdir(struct inode *inode, FILE_ID_T *fid)
 	if (!ep)
 		return -EIO;
 
+#ifdef CONFIG_EXFAT_CHECK_RO_ATTR
 	if (EXFAT_SB(sb)->fsi.fs_func->get_entry_attr(ep) & ATTR_READONLY)
 		return -EPERM;
 

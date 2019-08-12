@@ -42,8 +42,15 @@
 #include "exfat.h"
 #include "version.h"
 
-#ifdef CONFIG_EXFAT_UEVENT
-static struct kobject exfat_uevent_kobj;
+#ifdef CONFIG_EXFAT_SUPPORT_STLOG
+#ifdef CONFIG_PROC_FSLOG
+#include <linux/fslog.h>
+#else
+#include <linux/stlog.h>
+#endif
+#else
+#define ST_LOG(fmt, ...)
+#endif
 
 int exfat_uevent_init(struct kset *exfat_kset)
 {
@@ -102,19 +109,28 @@ void __exfat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
 		va_start(args, fmt);
 		vaf.fmt = fmt;
 		vaf.va = &args;
-		pr_err("exFAT-fs (%s[%d:%d]): ERR: %pV\n",
+		pr_err("[EXFAT](%s[%d:%d]):ERR: %pV\n",
 			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
+#ifdef CONFIG_EXFAT_SUPPORT_STLOG
+		if (opts->errors == EXFAT_ERRORS_RO && !(sb->s_flags & MS_RDONLY)) {
+			ST_LOG("[EXFAT](%s[%d:%d]):ERR: %pV\n",
+				sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
+		}
+#endif
 		va_end(args);
 	}
 
 	if (opts->errors == EXFAT_ERRORS_PANIC) {
-		panic("exFAT-fs (%s[%d:%d]): fs panic from previous error\n",
+		panic("[EXFAT](%s[%d:%d]): fs panic from previous error\n",
 			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
-	} else if (opts->errors == EXFAT_ERRORS_RO && !EXFAT_IS_SB_RDONLY(sb)) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+	} else if (opts->errors == EXFAT_ERRORS_RO && !(sb->s_flags & MS_RDONLY)) {
 		sb->s_flags |= MS_RDONLY;
-#else
-		sb->s_flags |= SB_RDONLY;
+		exfat_statistics_set_mnt_ro();
+		pr_err("[EXFAT](%s[%d:%d]): Filesystem has been set "
+			"read-only\n", sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
+#ifdef CONFIG_EXFAT_SUPPORT_STLOG
+		ST_LOG("[EXFAT](%s[%d:%d]): Filesystem has been set read-only\n",
+			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
 #endif
 		pr_err("exFAT-fs (%s[%d:%d]): file-system has been set to "
 			"read-only\n", sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
@@ -126,6 +142,7 @@ EXPORT_SYMBOL(__exfat_fs_error);
 /**
  * __exfat_msg() - print preformated EXFAT specific messages.
  * All logs except what uses exfat_fs_error() should be written by __exfat_msg()
+ * If 'st' is set, the log is propagated to ST_LOG.
  */
 void __exfat_msg(struct super_block *sb, const char *level, int st, const char *fmt, ...)
 {
@@ -138,15 +155,24 @@ void __exfat_msg(struct super_block *sb, const char *level, int st, const char *
 	vaf.fmt = fmt;
 	vaf.va = &args;
 	/* level means KERN_ pacility level */
-	printk("%sexFAT-fs (%s[%d:%d]): %pV\n", level,
+	printk("%s[EXFAT](%s[%d:%d]): %pV\n", level,
 			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
+#ifdef CONFIG_EXFAT_SUPPORT_STLOG
+	if (st) {
+		ST_LOG("[EXFAT](%s[%d:%d]): %pV\n",
+				sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
+	}
+#endif
 	va_end(args);
 }
 EXPORT_SYMBOL(__exfat_msg);
 
 void exfat_log_version(void)
 {
-	pr_info("exFAT: file-system version %s\n", EXFAT_VERSION);
+	pr_info("[EXFAT] Filesystem version %s\n", EXFAT_VERSION);
+#ifdef CONFIG_EXFAT_SUPPORT_STLOG
+	ST_LOG("[EXFAT] Filesystem version %s\n", EXFAT_VERSION);
+#endif
 }
 EXPORT_SYMBOL(exfat_log_version);
 
@@ -185,7 +211,7 @@ static time_t accum_days_in_year[] = {
 };
 
 /* Convert a FAT time/date pair to a UNIX date (seconds since 1 1 70). */
-void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec_compat *ts,
+void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec *ts,
 		DATE_TIME_T *tp)
 {
 	time_t year = tp->Year;
@@ -208,7 +234,7 @@ void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec_compat *ts,
 }
 
 /* Convert linear UNIX date to a FAT time/date pair. */
-void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec_compat *ts,
+void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec *ts,
 		DATE_TIME_T *tp)
 {
 	time_t second = ts->tv_sec;
@@ -275,7 +301,6 @@ TIMESTAMP_T *tm_now(struct exfat_sb_info *sbi, TIMESTAMP_T *tp)
 	struct timespec_compat ts;
 	DATE_TIME_T dt;
 
-	KTIME_GET_REAL_TS(&ts);
 	exfat_time_unix2fat(sbi, &ts, &dt);
 
 	tp->year = dt.Year;

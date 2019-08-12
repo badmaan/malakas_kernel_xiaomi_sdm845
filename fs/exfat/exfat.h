@@ -29,32 +29,8 @@
 #include <linux/kobject.h>
 #include "api.h"
 
-/*************************************************************************
- * FUNCTIONS WHICH HAS KERNEL VERSION DEPENDENCY
- *************************************************************************/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
-#include <linux/iversion.h>
-#define INC_IVERSION(x)		(inode_inc_iversion(x))
-#define GET_IVERSION(x)		(inode_peek_iversion_raw(x))
-#define SET_IVERSION(x,y)	(inode_set_iversion(x, y))
-#else
-#define INC_IVERSION(x)		(x->i_version++)
-#define GET_IVERSION(x)		(x->i_version)
-#define SET_IVERSION(x,y)	(x->i_version = y)
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
-#define timespec_compat	timespec64
-#define KTIME_GET_REAL_TS ktime_get_real_ts64
-#else
-#define timespec_compat	timespec
-#define KTIME_GET_REAL_TS ktime_get_real_ts
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-#define EXFAT_IS_SB_RDONLY(sb)	((sb)->s_flags & MS_RDONLY)
-#else
-#define EXFAT_IS_SB_RDONLY(sb)	((sb)->s_flags & SB_RDONLY)
+#ifdef CONFIG_EXFAT_DFR
+#include "dfr.h"
 #endif
 
 /*
@@ -63,6 +39,12 @@
 #define EXFAT_ERRORS_CONT	(1)    /* ignore error and continue */
 #define EXFAT_ERRORS_PANIC	(2)    /* panic on error */
 #define EXFAT_ERRORS_RO		(3)    /* remount r/o on error */
+
+/*
+ * exfat allocator flags
+ */
+#define EXFAT_ALLOC_DELAY	(1)    /* Delayed allocation */
+#define EXFAT_ALLOC_SMART	(2)    /* Smart allocation */
 
 /*
  * exfat allocator destination for smart allocation
@@ -103,6 +85,16 @@
 #define SECT_TO_CLUS(fsi, sec)	\
 	((u32)((((sec) - (fsi)->data_start_sector) >> (fsi)->sect_per_clus_bits) + CLUS_BASE))
 
+/* variables defined at exfat.c */
+extern const char *FS_TYPE_STR[];
+
+enum {
+	FS_TYPE_AUTO,
+	FS_TYPE_EXFAT,
+	FS_TYPE_VFAT,
+	FS_TYPE_MAX
+};
+
 /*
  * exfat mount in-memory data
  */
@@ -119,14 +111,23 @@ struct exfat_mount_options {
 	unsigned short allow_utime; /* permission for setting the [am]time */
 	unsigned short codepage;    /* codepage for shortname conversions */
 	char *iocharset;            /* charset for filename input/display */
+	struct {
+		unsigned int pack_ratio;
+		unsigned int sect_per_au;
+		unsigned int misaligned_sect;
+	} amap_opt;		    /* AMAP-related options (see amap.c) */
 
 	unsigned char utf8;
 	unsigned char casesensitive;
+	unsigned char adj_hidsect;
 	unsigned char tz_utc;
+	unsigned char improved_allocation;
+	unsigned char defrag;
 	unsigned char symlink;      /* support symlink operation */
 	unsigned char errors;       /* on error: continue, panic, remount-ro */
 	unsigned char discard;      /* flag on if -o dicard specified and device support discard() */
-	unsigned char delayed_meta; /* delay flushing dirty metadata */
+	unsigned char fs_type;      /* fs_type that user specified */
+	unsigned short adj_req;     /* support aligned mpage write */
 };
 
 #define EXFAT_HASH_BITS    8
@@ -161,6 +162,23 @@ struct exfat_sb_info {
 	long debug_flags;
 #endif /* CONFIG_EXFAT_DBG_IOCTL */
 
+#ifdef	CONFIG_EXFAT_DFR
+	struct defrag_info dfr_info;
+	struct completion dfr_complete;
+	unsigned int *dfr_new_clus;
+	int dfr_new_idx;
+	unsigned int *dfr_page_wb;
+	void **dfr_pagep;
+	unsigned int dfr_hint_clus;
+	unsigned int dfr_hint_idx;
+	int dfr_reserved_clus;
+
+#ifdef	CONFIG_EXFAT_DFR_DEBUG
+	int dfr_spo_flag;
+#endif  /* CONFIG_EXFAT_DFR_DEBUG */
+
+#endif  /* CONFIG_EXFAT_DFR */
+
 #ifdef CONFIG_EXFAT_TRACE_IO
 	/* Statistics for allocator */
 	unsigned int stat_n_pages_written;	/* # of written pages in total */
@@ -185,12 +203,30 @@ struct exfat_inode_info {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
 	struct rw_semaphore truncate_lock; /* protect bmap against truncate */
 #endif
+#ifdef	CONFIG_EXFAT_DFR
+	struct defrag_info dfr_info;
+#endif
 	struct inode vfs_inode;
 };
 
 /*
  * FIXME : needs on-disk-slot in-memory data
  */
+
+/* static inline functons */
+static inline const char *exfat_get_vol_type_str(unsigned int type)
+{
+	if (type == EXFAT)
+		return "exfat";
+	else if (type == FAT32)
+		return "vfat:32";
+	else if (type == FAT16)
+		return "vfat:16";
+	else if (type == FAT12)
+		return "vfat:12";
+
+	return "unknown";
+}
 
 static inline struct exfat_sb_info *EXFAT_SB(struct super_block *sb)
 {
@@ -259,6 +295,33 @@ static inline void exfat_save_attr(struct inode *inode, u32 attr)
 		EXFAT_I(inode)->fid.attr = attr & (ATTR_RWMASK | ATTR_READONLY);
 }
 
+/* exfat/statistics.c */
+/* bigdata function */
+#ifdef CONFIG_EXFAT_STATISTICS
+extern int exfat_statistics_init(struct kset *exfat_kset);
+extern void exfat_statistics_uninit(void);
+extern void exfat_statistics_set_mnt(FS_INFO_T *fsi);
+extern void exfat_statistics_set_mnt_ro(void);
+extern void exfat_statistics_set_mkdir(u8 flags);
+extern void exfat_statistics_set_create(u8 flags);
+extern void exfat_statistics_set_rw(u8 flags, u32 clu_offset, s32 create);
+extern void exfat_statistics_set_trunc(u8 flags, CHAIN_T *clu);
+extern void exfat_statistics_set_vol_size(struct super_block *sb);
+#else
+static inline int exfat_statistics_init(struct kset *exfat_kset)
+{
+	return 0;
+}
+static inline void exfat_statistics_uninit(void) {};
+static inline void exfat_statistics_set_mnt(FS_INFO_T *fsi) {};
+static inline void exfat_statistics_set_mnt_ro(void) {};
+static inline void exfat_statistics_set_mkdir(u8 flags) {};
+static inline void exfat_statistics_set_create(u8 flags) {};
+static inline void exfat_statistics_set_rw(u8 flags, u32 clu_offset, s32 create) {};
+static inline void exfat_statistics_set_trunc(u8 flags, CHAIN_T *clu) {};
+static inline void exfat_statistics_set_vol_size(struct super_block *sb) {};
+#endif
+
 /* exfat/nls.c */
 /* NLS management function */
 s32  nls_cmp_sfn(struct super_block *sb, u8 *a, u8 *b);
@@ -268,6 +331,12 @@ s32  nls_sfn_to_uni16s(struct super_block *sb, DOS_NAME_T *p_dosname, UNI_NAME_T
 s32  nls_uni16s_to_vfsname(struct super_block *sb, UNI_NAME_T *uniname, u8 *p_cstring, s32 len);
 s32  nls_vfsname_to_uni16s(struct super_block *sb, const u8 *p_cstring,
 			const s32 len, UNI_NAME_T *uniname, s32 *p_lossy);
+
+/* exfat/mpage.c */
+#ifdef CONFIG_EXFAT_ALIGNED_MPAGE_WRITE
+int exfat_mpage_writepages(struct address_space *mapping,
+			struct writeback_control *wbc, get_block_t *get_block);
+#endif
 
 /* exfat/xattr.c */
 #ifdef CONFIG_EXFAT_VIRTUAL_XATTR
@@ -281,18 +350,6 @@ static inline void setup_exfat_xattr_handler(struct super_block *sb) {};
 #endif
 
 /* exfat/misc.c */
-#ifdef CONFIG_EXFAT_UEVENT
-extern int exfat_uevent_init(struct kset *exfat_kset);
-extern void exfat_uevent_uninit(void);
-extern void exfat_uevent_ro_remount(struct super_block *sb);
-#else
-static inline int exfat_uevent_init(struct kset *exfat_kset)
-{
-	return 0;
-}
-static inline void exfat_uevent_uninit(void) {};
-static inline void exfat_uevent_ro_remount(struct super_block *sb) {};
-#endif
 extern void
 __exfat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
 	__printf(3, 4) __cold;
@@ -308,9 +365,9 @@ __exfat_msg(struct super_block *sb, const char *lv, int st, const char *fmt, ...
 #define exfat_log_msg(sb, lv, fmt, args...)          \
 	__exfat_msg(sb, lv, 1, fmt, ## args)
 extern void exfat_log_version(void);
-extern void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec_compat *ts,
+extern void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec *ts,
 				DATE_TIME_T *tp);
-extern void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec_compat *ts,
+extern void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec *ts,
 				DATE_TIME_T *tp);
 extern TIMESTAMP_T *tm_now(struct exfat_sb_info *sbi, TIMESTAMP_T *tm);
 
@@ -352,7 +409,7 @@ extern struct timeval __t2;
 #define TIME_END(e)	exfat_time_current_usec(e)
 #define TIME_ELAPSED(s, e) ((u32)(((e)->tv_sec - (s)->tv_sec) * 1000000 + \
 			((e)->tv_usec - (s)->tv_usec)))
-#define PRINT_TIME(n)	pr_info("exFAT: Elapsed time %d = %d (usec)\n", n, (__t2 - __t1))
+#define PRINT_TIME(n)	pr_info("[EXFAT] Elapsed time %d = %d (usec)\n", n, (__t2 - __t1))
 #else /* CONFIG_EXFAT_TRACE_ELAPSED_TIME */
 #define TIME_GET(tv)    (0)
 #define TIME_START(s)
@@ -441,9 +498,10 @@ extern void __exfat_dmsg(int level, const char *fmt, ...) __printf(2, 3) __cold;
 
 #endif /* CONFIG_EXFAT_DBG_MSG */
 
+
 #define ASSERT(expr)	{					\
 	if (!(expr)) {						\
-		pr_err("exFAT: Assertion failed! %s\n", #expr);	\
+		pr_err("Assertion failed! %s\n", #expr);	\
 		BUG_ON(1);					\
 	}							\
 }

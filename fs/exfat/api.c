@@ -23,6 +23,17 @@
 /*                                                                      */
 /************************************************************************/
 
+#include <linux/version.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/mutex.h>
+
+#include "version.h"
+#include "config.h"
+
+#include "exfat.h"
+#include "core.h"
+
 /*----------------------------------------------------------------------*/
 /*  Internal structures                                                 */
 /*----------------------------------------------------------------------*/
@@ -318,6 +329,22 @@ static s32 fsapi_map_clus(struct inode *inode, u32 clu_offset, u32 *clu, int des
 	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
 	return err;
 }
+EXPORT_SYMBOL(fsapi_map_clus);
+
+/* reserve a cluster */
+s32 fsapi_reserve_clus(struct inode *inode)
+{
+	s32 err;
+	struct super_block *sb = inode->i_sb;
+
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	TMSG("%s entered (inode:%p)\n", __func__, inode);
+	err = fscore_reserve_clus(inode);
+	TMSG("%s exited (err:%d)\n", __func__, err);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+	return err;
+}
+EXPORT_SYMBOL(fsapi_reserve_clus);
 
 /*----------------------------------------------------------------------*/
 /*  Directory Operation Functions                                       */
@@ -397,7 +424,22 @@ static s32 fsapi_cache_flush(struct super_block *sb, int do_sync)
 	return 0;
 }
 
-static u32 fsapi_get_au_stat(struct super_block *sb, s32 mode)
+/* release FAT & buf cache */
+s32 fsapi_cache_release(struct super_block *sb)
+{
+#ifdef CONFIG_EXFAT_DEBUG
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+
+	fcache_release_all(sb);
+	dcache_release_all(sb);
+
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+#endif /* CONFIG_EXFAT_DEBUG */
+	return 0;
+}
+EXPORT_SYMBOL(fsapi_cache_release);
+
+u32 fsapi_get_au_stat(struct super_block *sb, s32 mode)
 {
 	/* volume lock is not required */
 	return fscore_get_au_stat(sb, mode);
@@ -419,5 +461,154 @@ static s32 fsapi_check_bdi_valid(struct super_block *sb)
 {
 	return fscore_check_bdi_valid(sb);
 }
+EXPORT_SYMBOL(fsapi_check_bdi_valid);
+
+
+
+#ifdef	CONFIG_EXFAT_DFR
+/*----------------------------------------------------------------------*/
+/*  Defragmentation related                                             */
+/*----------------------------------------------------------------------*/
+s32 fsapi_dfr_get_info(struct super_block *sb, void *arg)
+{
+	/* volume lock is not required */
+	return defrag_get_info(sb, (struct defrag_info_arg *)arg);
+}
+EXPORT_SYMBOL(fsapi_dfr_get_info);
+
+s32 fsapi_dfr_scan_dir(struct super_block *sb, void *args)
+{
+	s32 err;
+
+	/* check the validity of pointer parameters */
+	ASSERT(args);
+
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	err = defrag_scan_dir(sb, (struct defrag_trav_arg *)args);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+	return err;
+}
+EXPORT_SYMBOL(fsapi_dfr_scan_dir);
+
+s32 fsapi_dfr_validate_clus(struct inode *inode, void *chunk, int skip_prev)
+{
+	s32 err;
+	struct super_block *sb = inode->i_sb;
+
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	err = defrag_validate_cluster(inode,
+		(struct defrag_chunk_info *)chunk, skip_prev);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+	return err;
+}
+EXPORT_SYMBOL(fsapi_dfr_validate_clus);
+
+s32 fsapi_dfr_reserve_clus(struct super_block *sb, s32 nr_clus)
+{
+	s32 err;
+
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	err = defrag_reserve_clusters(sb, nr_clus);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+	return err;
+}
+EXPORT_SYMBOL(fsapi_dfr_reserve_clus);
+
+s32 fsapi_dfr_mark_ignore(struct super_block *sb, unsigned int clus)
+{
+	/* volume lock is not required */
+	return defrag_mark_ignore(sb, clus);
+}
+EXPORT_SYMBOL(fsapi_dfr_mark_ignore);
+
+void fsapi_dfr_unmark_ignore_all(struct super_block *sb)
+{
+	/* volume lock is not required */
+	defrag_unmark_ignore_all(sb);
+}
+EXPORT_SYMBOL(fsapi_dfr_unmark_ignore_all);
+
+s32 fsapi_dfr_map_clus(struct inode *inode, u32 clu_offset, u32 *clu)
+{
+	s32 err;
+	struct super_block *sb = inode->i_sb;
+
+	/* check the validity of pointer parameters */
+	ASSERT(clu);
+
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	err = defrag_map_cluster(inode, clu_offset, clu);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+
+	return err;
+}
+EXPORT_SYMBOL(fsapi_dfr_map_clus);
+
+void fsapi_dfr_writepage_endio(struct page *page)
+{
+	/* volume lock is not required */
+	defrag_writepage_end_io(page);
+}
+EXPORT_SYMBOL(fsapi_dfr_writepage_endio);
+
+void fsapi_dfr_update_fat_prev(struct super_block *sb, int force)
+{
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	defrag_update_fat_prev(sb, force);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+}
+EXPORT_SYMBOL(fsapi_dfr_update_fat_prev);
+
+void fsapi_dfr_update_fat_next(struct super_block *sb)
+{
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	defrag_update_fat_next(sb);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+}
+EXPORT_SYMBOL(fsapi_dfr_update_fat_next);
+
+void fsapi_dfr_check_discard(struct super_block *sb)
+{
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	defrag_check_discard(sb);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+}
+EXPORT_SYMBOL(fsapi_dfr_check_discard);
+
+void fsapi_dfr_free_clus(struct super_block *sb, u32 clus)
+{
+	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
+	defrag_free_cluster(sb, clus);
+	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
+}
+EXPORT_SYMBOL(fsapi_dfr_free_clus);
+
+s32 fsapi_dfr_check_dfr_required(struct super_block *sb, int *totalau, int *cleanau, int *fullau)
+{
+	/* volume lock is not required */
+	return defrag_check_defrag_required(sb, totalau, cleanau, fullau);
+}
+EXPORT_SYMBOL(fsapi_dfr_check_dfr_required);
+
+s32 fsapi_dfr_check_dfr_on(struct inode *inode, loff_t start, loff_t end, s32 cancel, const char *caller)
+{
+	/* volume lock is not required */
+	return defrag_check_defrag_on(inode, start, end, cancel, caller);
+}
+EXPORT_SYMBOL(fsapi_dfr_check_dfr_on);
+
+
+
+#ifdef CONFIG_EXFAT_DFR_DEBUG
+void fsapi_dfr_spo_test(struct super_block *sb, int flag, const char *caller)
+{
+	/* volume lock is not required */
+	defrag_spo_test(sb, flag, caller);
+}
+EXPORT_SYMBOL(fsapi_dfr_spo_test);
+#endif
+
+
+#endif	/* CONFIG_EXFAT_DFR */
 
 /* end of exfat_api.c */
