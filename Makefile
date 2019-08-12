@@ -689,7 +689,7 @@ export CFLAGS_GCOV CFLAGS_KCOV
 ifdef CONFIG_LD_GOLD
 LDFINAL_vmlinux := $(LD)
 LD		:= $(LDGOLD)
-LDFLAGS		+= -O3 
+LDFLAGS		+= -O3
 endif
 ifdef CONFIG_LD_LLD
 LD		:= $(LDLLD)
@@ -750,7 +750,8 @@ endif
 
 ifdef CONFIG_LTO_CLANG
 ifdef CONFIG_THINLTO
-lto-clang-flags := -flto=thin -fsplit-lto-unit
+lto-clang-flags := -flto=thin -fsplit-lto-unit -O3
+KBUILD_LDFLAGS += --thinlto-cache-dir=.thinlto-cache
 ifdef THINLTO_CACHE
 ifeq ($(ld-name),lld)
 LDFLAGS		+= --thinlto-cache-dir=$(THINLTO_CACHE)
