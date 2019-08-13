@@ -23,17 +23,6 @@
 /*                                                                      */
 /************************************************************************/
 
-#include <linux/version.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/mutex.h>
-
-#include "version.h"
-#include "config.h"
-
-#include "exfat.h"
-#include "core.h"
-
 /*----------------------------------------------------------------------*/
 /*  Internal structures                                                 */
 /*----------------------------------------------------------------------*/
@@ -329,22 +318,6 @@ static s32 fsapi_map_clus(struct inode *inode, u32 clu_offset, u32 *clu, int des
 	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
 	return err;
 }
-EXPORT_SYMBOL(fsapi_map_clus);
-
-/* reserve a cluster */
-s32 fsapi_reserve_clus(struct inode *inode)
-{
-	s32 err;
-	struct super_block *sb = inode->i_sb;
-
-	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
-	TMSG("%s entered (inode:%p)\n", __func__, inode);
-	err = fscore_reserve_clus(inode);
-	TMSG("%s exited (err:%d)\n", __func__, err);
-	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
-	return err;
-}
-EXPORT_SYMBOL(fsapi_reserve_clus);
 
 /*----------------------------------------------------------------------*/
 /*  Directory Operation Functions                                       */
@@ -424,22 +397,7 @@ static s32 fsapi_cache_flush(struct super_block *sb, int do_sync)
 	return 0;
 }
 
-/* release FAT & buf cache */
-s32 fsapi_cache_release(struct super_block *sb)
-{
-#ifdef CONFIG_EXFAT_DEBUG
-	mutex_lock(&(EXFAT_SB(sb)->s_vlock));
-
-	fcache_release_all(sb);
-	dcache_release_all(sb);
-
-	mutex_unlock(&(EXFAT_SB(sb)->s_vlock));
-#endif /* CONFIG_EXFAT_DEBUG */
-	return 0;
-}
-EXPORT_SYMBOL(fsapi_cache_release);
-
-u32 fsapi_get_au_stat(struct super_block *sb, s32 mode)
+static u32 fsapi_get_au_stat(struct super_block *sb, s32 mode)
 {
 	/* volume lock is not required */
 	return fscore_get_au_stat(sb, mode);
@@ -461,6 +419,5 @@ static s32 fsapi_check_bdi_valid(struct super_block *sb)
 {
 	return fscore_check_bdi_valid(sb);
 }
-EXPORT_SYMBOL(fsapi_check_bdi_valid);
 
 /* end of exfat_api.c */
