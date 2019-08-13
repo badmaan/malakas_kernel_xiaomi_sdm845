@@ -45,7 +45,7 @@ Ubuntu will handle upgrades automatically as well.
 
 2. Install the module
 
-   `sudo apt install exfat-dkms`
+   `sudo apt install exfat-linux`
 
 This will use DKMS(Dynamic Kernel Module Support) and automatically build exFAT module for your current Ubuntu installation.
 
@@ -115,7 +115,7 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.2.0  |    7042 MB/s |    2173 MB/s |
+| **exfat-linux**  | 2.1.10 |    7042 MB/s |    2173 MB/s |
 | [exfat-nofuse]   | 1.2.9  |    6849 MB/s |    1961 MB/s |
 | [exfat-fuse]     | N/A    |    3097 MB/s |    1710 MB/s |
 | ext4             | N/A    |    7352 MB/s |    3333 MB/s |
@@ -124,7 +124,7 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.2.0  |     760 MB/s |    2222 MB/s |
+| **exfat-linux**  | 2.1.10 |     760 MB/s |    2222 MB/s |
 | [exfat-nofuse]   | 1.2.9  |     760 MB/s |    2160 MB/s |
 | [exfat-fuse]     | N/A    |     1.7 MB/s |     1.6 MB/s |
 | ext4             | N/A    |     747 MB/s |    2816 MB/s |
@@ -135,7 +135,7 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.2.0  |    1283 MB/s |    1832 MB/s |
+| **exfat-linux**  | 2.1.10 |    1283 MB/s |    1832 MB/s |
 | [exfat-nofuse]   | 1.2.9  |    1285 MB/s |    1678 MB/s |
 | [exfat-fuse]     | N/A    |     751 MB/s |    1464 MB/s |
 | ext4             | N/A    |    1283 MB/s |    3356 MB/s |
@@ -144,58 +144,11 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.2.0  |      26 MB/s |    1885 MB/s |
+| **exfat-linux**  | 2.1.10 |      26 MB/s |    1885 MB/s |
 | [exfat-nofuse]   | 1.2.9  |      24 MB/s |    1827 MB/s |
 | [exfat-fuse]     | N/A    |     1.6 MB/s |     1.6 MB/s |
 | ext4             | N/A    |      29 MB/s |    2821 MB/s |
 
 [exfat-fuse]: https://github.com/relan/exfat
-
-## Mount options
-
-* uid
-* gid
-* umask
-* dmask
-* fmask
-* allow_utime
-* codepage
-* iocharset
-* utf8
-* tz
-
-  * Please refer to the [vfat](https://github.com/torvalds/linux/blob/master/Documentation/filesystems/vfat.txt)'s documentation.
-
-* namecase
-
-  * Passing `namecase=1` as a mount option will make exFAT operate in a case-sensitive mode.
-
-  * Default is insensitive mode.
-
-* symlink
-
-  * Allow a symlink to be created under exFAT.
-
-* errors=continue
-
-  * Keep going on a filesystem error.
-
-* errors=panic
-
-  * Panic and halt the machine if an error occurs.
-
-* errors=remount-ro
-
-  * Remount the filesystem read-only on an error.
-
-* discard
-
-  * Enable the use of discard/TRIM commands to ensure flash storage doesn't run out of free blocks. This option may introduce latency penalty on file removal operations.
-
-* delayed_meta
-
-  * Delay flushing metadata, hence improving performance.
-
-  * This is enabled by default, please pass `nodelayed_meta` to disable it.
 
 ## Enjoy!
