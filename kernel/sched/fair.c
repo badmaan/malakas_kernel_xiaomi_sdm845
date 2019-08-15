@@ -7618,7 +7618,7 @@ task_is_boosted(struct task_struct *p) {
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 	return schedtune_task_boost(p) > 0;
 #else
-	return get_sysctl_sched_cfs_boost() > 0;
+	return get_sysctl_sched_cfs_boost() > 1;
 #endif
 }
 
@@ -8810,7 +8810,7 @@ static struct task_struct *hisi_get_heaviest_task(
 		boosted = schedtune_task_boost(p) > 0;
 		prefer_idle = schedtune_prefer_idle(p) > 0;
 #else
-		boosted = get_sysctl_sched_cfs_boost() > 0;
+		boosted = get_sysctl_sched_cfs_boost() > 1;
 		prefer_idle = 0;
 #endif
 
@@ -8896,7 +8896,7 @@ redo:
 			boosted = schedtune_task_boost(p) > 0;
 			prefer_idle = schedtune_prefer_idle(p) > 0;
 #else
-			boosted = get_sysctl_sched_cfs_boost() > 0;
+			boosted = get_sysctl_sched_cfs_boost() > 1;
 			prefer_idle = 0;
 #endif
 			if (!boosted && !prefer_idle &&
