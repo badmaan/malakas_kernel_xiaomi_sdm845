@@ -37,7 +37,7 @@ adb kill-server
 adb tcpip 5555
 adb connect 192.168.3.101:5555
 sleep 2
-adb push malakas_kernel_beryllium_69-65hz_$(date +"%Y-%m-%d").zip /sdcard/...MLX.../malakas_kernel_beryllium_69-65hz_-$(date +"%Y-%m-%d").zip
+adb push malakas_kernel_beryllium_69-65hz_$(date +"%Y-%m-%d").zip /sdcard/MLX/malakas_kernel_beryllium_69-65hz_-$(date +"%Y-%m-%d").zip
 adb reboot recovery
 
 
