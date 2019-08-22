@@ -4102,6 +4102,62 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 	}
 		break;
 
+		if (blob_size < sizeof(struct cam_isp_init_frame_drop_config)) {
+			CAM_ERR(CAM_ISP, "Invalid blob size %u expected %lu",
+				blob_size,
+				sizeof(struct cam_isp_init_frame_drop_config));
+			return -EINVAL;
+		}
+
+		rc = cam_isp_blob_init_frame_drop(frame_drop_cfg, prepare);
+		if (rc)
+			CAM_ERR(CAM_ISP, "Init Frame drop Update Failed");
+	}
+		break;
+	case CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_DIMENSION_CONFIG: {
+		struct cam_isp_sensor_config *csid_dim_config;
+
+		if (blob_size < sizeof(struct cam_isp_sensor_config)) {
+			CAM_ERR(CAM_ISP, "Invalid blob size %u expected %lu",
+				blob_size,
+				sizeof(struct cam_isp_sensor_config));
+			return -EINVAL;
+		}
+
+		csid_dim_config =
+			(struct cam_isp_sensor_config *)blob_data;
+
+		rc = cam_isp_blob_sensor_config(blob_type, blob_info,
+			csid_dim_config, prepare);
+		if (rc)
+			CAM_ERR(CAM_ISP,
+				"Sensor Dimension Update Failed rc: %d", rc);
+	}
+		break;
+	case CAM_ISP_GENERIC_BLOB_TYPE_FPS_CONFIG: {
+		struct cam_fps_config *fps_config;
+		struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
+
+		if (blob_size < sizeof(struct cam_fps_config)) {
+			CAM_ERR(CAM_ISP,
+				"Invalid fps blob size %u expected %lu",
+				blob_size, sizeof(struct cam_fps_config));
+			return -EINVAL;
+		}
+
+		fps_config = (struct cam_fps_config *)blob_data;
+		prepare_hw_data = (struct cam_isp_prepare_hw_update_data  *)
+			prepare->priv;
+
+		prepare_hw_data->fps = fps_config->fps;
+
+		rc = cam_isp_blob_fps_config(blob_type, blob_info,
+			fps_config, prepare);
+		if (rc)
+			CAM_ERR(CAM_ISP, "FPS Update Failed rc: %d", rc);
+
+	}
+		break;
 	default:
 		CAM_WARN(CAM_ISP, "Invalid blob type %d", blob_type);
 		break;

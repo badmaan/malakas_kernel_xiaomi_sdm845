@@ -1160,6 +1160,14 @@ static int cam_ife_csid_disable_hw(struct cam_ife_csid_hw *csid_hw)
 	spin_lock_irqsave(&csid_hw->lock_state, flags);
 	csid_hw->device_enabled = 0;
 	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
+	for (i = 0; i < CAM_IFE_PIX_PATH_RES_MAX; i++)
+		csid_hw->res_sof_cnt[i] = 0;
+
+	csid_hw->ipp_path_config.measure_enabled = 0;
+	csid_hw->ppp_path_config.measure_enabled = 0;
+	for (i = 0; i <= CAM_IFE_PIX_PATH_RES_RDI_3; i++)
+		csid_hw->rdi_path_config[i].measure_enabled = 0;
+
 	csid_hw->hw_info->hw_state = CAM_HW_STATE_POWER_DOWN;
 	csid_hw->error_irq_count = 0;
 	csid_hw->first_sof_ts = 0;
@@ -1782,7 +1790,8 @@ static int cam_ife_csid_enable_pxl_path(
 	struct cam_ife_csid_path_cfg             *path_data;
 	const struct cam_ife_csid_pxl_reg_offset *pxl_reg = NULL;
 	bool                                      is_ipp;
-	uint32_t                                  val = 0;
+	uint32_t                                  val = 0, path_status;
+	struct cam_isp_sensor_dimension  *path_config;
 
 	path_data = (struct cam_ife_csid_path_cfg   *) res->res_priv;
 	csid_reg = csid_hw->csid_info->csid_reg;
@@ -2651,6 +2660,14 @@ static int cam_ife_csid_release(void *hw_priv,
 		break;
 	case CAM_ISP_RESOURCE_PIX_PATH:
 		res->res_state = CAM_ISP_RESOURCE_STATE_AVAILABLE;
+		cam_ife_csid_reset_init_frame_drop(csid_hw);
+		if (res->res_id == CAM_IFE_PIX_PATH_RES_IPP)
+			csid_hw->ipp_path_config.measure_enabled = 0;
+		else if (res->res_id == CAM_IFE_PIX_PATH_RES_PPP)
+			csid_hw->ppp_path_config.measure_enabled = 0;
+		else
+			csid_hw->rdi_path_config[res->res_id].measure_enabled
+				= 0;
 		break;
 	default:
 		CAM_ERR(CAM_ISP, "CSID:%d Invalid res type:%d res id%d",
@@ -3165,6 +3182,12 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 		break;
 	case CAM_ISP_HW_CMD_CSID_CLOCK_UPDATE:
 		rc = cam_ife_csid_set_csid_clock(csid_hw, cmd_args);
+		break;
+	case CAM_IFE_CSID_SET_INIT_FRAME_DROP:
+		rc = cam_ife_csid_set_init_frame_drop(csid_hw, cmd_args);
+		break;
+	case CAM_IFE_CSID_SET_SENSOR_DIMENSION_CFG:
+		rc = cam_ife_csid_set_sensor_dimension(csid_hw, cmd_args);
 		break;
 	default:
 		CAM_ERR(CAM_ISP, "CSID:%d unsupported cmd:%d",

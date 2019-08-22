@@ -529,6 +529,12 @@ static int cam_vfe_camif_process_cmd(struct cam_isp_resource_node *rsrc_node,
 			(struct cam_vfe_mux_camif_data *)rsrc_node->res_priv;
 		camif_priv->camif_debug = *((uint32_t *)cmd_args);
 		break;
+	case CAM_ISP_HW_CMD_GET_IRQ_REGISTER_DUMP:
+		rc = cam_vfe_camif_irq_reg_dump(rsrc_node);
+		break;
+	case CAM_ISP_HW_CMD_FPS_CONFIG:
+		rc = cam_vfe_camif_set_fps_config(rsrc_node, cmd_args);
+		break;
 	default:
 		CAM_ERR(CAM_ISP,
 			"unsupported process command:%d", cmd_type);

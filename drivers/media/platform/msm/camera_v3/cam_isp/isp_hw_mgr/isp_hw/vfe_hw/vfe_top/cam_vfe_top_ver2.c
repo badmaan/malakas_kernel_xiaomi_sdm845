@@ -739,6 +739,14 @@ int cam_vfe_top_process_cmd(void *device_priv, uint32_t cmd_type,
 	case CAM_ISP_HW_CMD_BW_CONTROL:
 		rc = cam_vfe_top_bw_control(top_priv, cmd_args, arg_size);
 		break;
+	case CAM_ISP_HW_CMD_GET_IRQ_REGISTER_DUMP:
+		rc = cam_vfe_get_irq_register_dump(top_priv,
+				cmd_args, arg_size);
+		break;
+	case CAM_ISP_HW_CMD_FPS_CONFIG:
+		rc = cam_vfe_top_fps_config(top_priv, cmd_args,
+			arg_size);
+		break;
 	default:
 		rc = -EINVAL;
 		CAM_ERR(CAM_ISP, "Error! Invalid cmd:%d", cmd_type);

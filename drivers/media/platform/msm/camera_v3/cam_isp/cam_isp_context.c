@@ -890,6 +890,14 @@ static int __cam_isp_ctx_sof_in_activated_state(
 	ctx_isp->sof_timestamp_val = sof_event_data->timestamp;
 	ctx_isp->boot_timestamp = sof_event_data->boot_time;
 
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+	else if (ctx_isp->fps && ((sof_event_data->irq_mono_boot_time -
+			ctx_isp->irq_timestamps) > ((1000*1000)/ctx_isp->fps)))
+		ctx_isp->irq_delay_detect = true;
+
+	ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+
 	CAM_DBG(CAM_ISP, "frame id: %lld time stamp:0x%llx, ctx %u",
 		ctx_isp->frame_id, ctx_isp->sof_timestamp_val, ctx->ctx_id);
 
@@ -926,6 +934,16 @@ static int __cam_isp_ctx_reg_upd_in_sof(struct cam_isp_context *ctx_isp,
 				"receive rup in unexpected state");
 	}
 
+	if (req_isp && req_isp->hw_update_data.fps)
+		ctx_isp->fps = req_isp->hw_update_data.fps;
+
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps = rup_event_data->irq_mono_boot_time;
+	else if (ctx_isp->fps && ((rup_event_data->irq_mono_boot_time -
+			ctx_isp->irq_timestamps) > ((1000*1000)/ctx_isp->fps)))
+		ctx_isp->irq_delay_detect = true;
+
+	ctx_isp->irq_timestamps = rup_event_data->irq_mono_boot_time;
 end:
 	return rc;
 }
@@ -1002,6 +1020,15 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	CAM_DBG(CAM_ISP, "next substate %d",
 		ctx_isp->substate_activated);
 end:
+
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps =
+			epoch_hw_event_data->irq_mono_boot_time;
+	else if (ctx_isp->fps && ((epoch_hw_event_data->irq_mono_boot_time -
+			ctx_isp->irq_timestamps) > ((1000*1000)/ctx_isp->fps)))
+		ctx_isp->irq_delay_detect = true;
+
+	ctx_isp->irq_timestamps = epoch_hw_event_data->irq_mono_boot_time;
 
 	return 0;
 }
@@ -1548,6 +1575,9 @@ static int __cam_isp_ctx_fs2_reg_upd_in_sof(struct cam_isp_context *ctx_isp,
 			CAM_ERR(CAM_ISP,
 				"receive rup in unexpected state");
 	}
+
+	if (req_isp && req_isp->hw_update_data.fps)
+		ctx_isp->fps = req_isp->hw_update_data.fps;
 
 end:
 	return rc;

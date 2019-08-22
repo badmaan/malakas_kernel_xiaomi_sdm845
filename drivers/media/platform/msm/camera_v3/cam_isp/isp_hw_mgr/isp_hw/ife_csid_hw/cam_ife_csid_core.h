@@ -515,6 +515,12 @@ struct cam_ife_csid_hw {
 	uint32_t                         error_irq_count;
 	uint32_t                         device_enabled;
 	spinlock_t                       lock_state;
+	uint32_t                         dual_usage;
+	uint32_t                         init_frame_drop;
+	uint32_t                         res_sof_cnt[CAM_IFE_PIX_PATH_RES_MAX];
+	uint32_t                         first_sof_ts;
+	struct cam_hw_intf              *ppi_hw_intf[CAM_CSID_PPI_HW_MAX];
+	bool                             ppi_enable;
 };
 
 int cam_ife_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
