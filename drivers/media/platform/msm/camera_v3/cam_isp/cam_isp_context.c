@@ -3578,6 +3578,8 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 	ctx_isp->req_info.last_applied_time_stamp = 0;
 	ctx_isp->req_info.last_bufdone_time_stamp = 0;
 	ctx_isp->req_info.last_reported_id_time_stamp = 0;
+	ctx_isp->prev_sof_timestamp_val = 0;
+	ctx_isp->prev_boot_timestamp = 0;
 
 	atomic_set(&ctx_isp->process_bubble, 0);
 

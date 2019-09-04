@@ -401,6 +401,11 @@ static void mqueue_evict_inode(struct inode *inode)
 		free_msg(msg);
 	}
 
+	/* Total amount of bytes accounted for the mqueue */
+	mq_treesize = info->attr.mq_maxmsg * sizeof(struct msg_msg) +
+		min_t(unsigned int, info->attr.mq_maxmsg, MQ_PRIO_MAX) *
+		sizeof(struct posix_msg_tree_node);
+
 	user = info->user;
 	if (user) {
 		unsigned long mq_bytes, mq_treesize;
