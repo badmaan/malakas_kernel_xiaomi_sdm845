@@ -431,7 +431,6 @@ union snd_codec_options {
 	struct snd_dec_ape ape;
 	struct snd_dec_aptx aptx_dec;
 	struct snd_dec_pcm pcm_dec;
-	struct snd_dec_amrwb_plus amrwbplus;
 };
 
 /** struct snd_codec_desc - description of codec capabilities
