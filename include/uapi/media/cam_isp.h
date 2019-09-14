@@ -446,6 +446,36 @@ struct cam_fe_config {
 	uint32_t    latency_buf_size;
 } __attribute__((packed));
 
+/**
+ * struct cam_isp_sensor_path_dimension
+ *
+ * @width             expected width
+ * @height            expected height
+ * @measure_enabled   flag to indicate if pixel measurement is to be enabled
+ */
+struct cam_isp_sensor_dimension {
+	uint32_t width;
+	uint32_t height;
+	uint32_t measure_enabled;
+} __attribute__((packed));
+
+/**
+ * struct cam_isp_sensor_config - Sensor Dimension configuration
+ *
+ * @pix_path:                   expected ppp path configuration
+ * @pix_path:                   expected ipp path configuration
+ * @rdi_path:                   expected rdi path configuration
+ * @hbi:                        HBI value
+ * @vbi:                        VBI value
+ */
+struct cam_isp_sensor_config {
+	struct cam_isp_sensor_dimension  ppp_path;
+	struct cam_isp_sensor_dimension  ipp_path;
+	struct cam_isp_sensor_dimension  rdi_path[4];
+	uint32_t                   hbi;
+	uint32_t                   vbi;
+} __attribute__((packed));
+
 /* Acquire Device/HW v2 */
 
 /**
@@ -470,6 +500,15 @@ struct cam_isp_acquire_hw_info {
 	uint32_t                input_info_offset;
 	uint64_t                data;
 };
+
+/**
+ * struct cam_fps_config - FPS blob support
+ *
+ * @fps:    FPS value
+ */
+struct cam_fps_config {
+	uint32_t        fps;
+} __attribute__((packed));
 
 #define CAM_ISP_ACQUIRE_COMMON_VER0         0x1000
 

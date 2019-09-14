@@ -44,6 +44,7 @@ struct cam_vfe_mux_camif_data {
 	bool                               enable_sof_irq_debug;
 	uint32_t                           irq_debug_cnt;
 	uint32_t                           camif_debug;
+	uint32_t                           fps;
 };
 
 static int cam_vfe_camif_validate_pix_pattern(uint32_t pattern)
@@ -265,9 +266,15 @@ static int cam_vfe_camif_resource_start(
 	case CAM_CPAS_TITAN_170_V110:
 	case CAM_CPAS_TITAN_170_V120:
 	default:
-		epoch0_irq_mask = (((rsrc_data->last_line -
+		if (rsrc_data->fps == CAM_ISP_FPS_60) {
+			epoch0_irq_mask = ((rsrc_data->last_line -
+				rsrc_data->first_line) / 2) +
+				rsrc_data->first_line;
+		} else {
+			epoch0_irq_mask = (((rsrc_data->last_line -
 				rsrc_data->first_line) * 2) / 3) +
 				rsrc_data->first_line;
+		}
 		epoch1_irq_mask = rsrc_data->reg_data->epoch_line_cfg &
 				0xFFFF;
 		computed_epoch_line_cfg = (epoch0_irq_mask << 16) |
@@ -479,6 +486,20 @@ static int cam_vfe_camif_sof_irq_debug(
 		camif_priv->enable_sof_irq_debug = false;
 
 	return 0;
+}
+static int cam_vfe_camif_set_fps_config(
+	struct cam_isp_resource_node *rsrc_node, void *cmd_args)
+{
+	struct cam_vfe_mux_camif_data *camif_priv = NULL;
+	struct cam_vfe_fps_config_args *fps_args = cmd_args;
+
+	camif_priv =
+		(struct cam_vfe_mux_camif_data *)rsrc_node->res_priv;
+
+	camif_priv->fps = fps_args->fps;
+
+	return 0;
+
 }
 
 static int cam_vfe_camif_process_cmd(struct cam_isp_resource_node *rsrc_node,

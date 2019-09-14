@@ -283,6 +283,22 @@ static int cam_vfe_top_fs_update(
 	return 0;
 }
 
+static int cam_vfe_top_fps_config(
+	struct cam_vfe_top_ver2_priv *top_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	struct cam_vfe_fps_config_args *cmd_update = NULL;
+
+	cmd_update =
+		(struct cam_vfe_fps_config_args *)cmd_args;
+
+	if (cmd_update->node_res->process_cmd)
+		return cmd_update->node_res->process_cmd(cmd_update->node_res,
+			CAM_ISP_HW_CMD_FPS_CONFIG, cmd_args, arg_size);
+
+	return 0;
+}
+
 static int cam_vfe_top_clock_update(
 	struct cam_vfe_top_ver2_priv *top_priv,
 	void *cmd_args, uint32_t arg_size)
