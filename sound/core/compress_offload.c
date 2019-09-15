@@ -788,6 +788,7 @@ static int snd_compr_drain(struct snd_compr_stream *stream)
 	case SNDRV_PCM_STATE_PREPARED:
 	case SNDRV_PCM_STATE_PAUSED:
 		return -EPERM;
+		goto ret;
 	case SNDRV_PCM_STATE_XRUN:
 		return -EPIPE;
 	default:
