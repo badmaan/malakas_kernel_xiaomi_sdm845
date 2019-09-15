@@ -479,6 +479,10 @@ struct cam_ife_csid_path_cfg {
  * @error_irq_count           Error IRQ count, if continuous error irq comes
  *                            need to stop the CSID and mask interrupts.
  *
+ * @first_sof_ts              flag to mark the first sof has been registered
+ * @ppi_hw_intf               interface to ppi hardware
+ * @ppi_enabled               flag to specify if the hardware has ppi bridge
+ *                            or not
  */
 struct cam_ife_csid_hw {
 	struct cam_hw_intf              *hw_intf;

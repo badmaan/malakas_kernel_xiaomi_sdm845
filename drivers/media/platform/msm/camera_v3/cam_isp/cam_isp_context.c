@@ -2534,6 +2534,9 @@ static int __cam_isp_ctx_rdi_only_reg_upd_in_bubble_applied_state(
 			jiffies_to_msecs(jiffies);
 	}
 
+	if (req_isp && req_isp->hw_update_data.fps)
+		ctx_isp->fps = req_isp->hw_update_data.fps;
+
 	__cam_isp_ctx_send_sof_timestamp(ctx_isp, request_id,
 		CAM_REQ_MGR_SOF_EVENT_SUCCESS);
 	CAM_DBG(CAM_ISP, "next substate %d", ctx_isp->substate_activated);
