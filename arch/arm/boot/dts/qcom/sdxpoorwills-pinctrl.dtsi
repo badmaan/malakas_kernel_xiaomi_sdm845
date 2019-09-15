@@ -1688,6 +1688,14 @@
 };
 
 &pmxpoorwills_gpios {
+	a2b_cdc_sel {
+		a2b_cdc_sel_default: a2b_cdc_sel_default {
+			pins = "gpio1";
+			power-source = <1>;
+			output-high;
+		};
+	};
+
 	ambient_therm {
 		ambient_therm_default: ambient_therm_default {
 			pins = "gpio2";
@@ -1699,6 +1707,15 @@
 		vdd_wlan_default: vdd_wlan_default {
 			pins = "gpio6";
 			bias-high-impedance;
+		};
+	};
+
+	vreg_rgmii_off {
+		vreg_rgmii_off_default: vreg_rgmii_off_default {
+			pins = "gpio9";
+			bias-pull-down;
+			output-disable;
+			input-enable;
 		};
 	};
 };

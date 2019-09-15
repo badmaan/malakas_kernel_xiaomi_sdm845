@@ -37,6 +37,8 @@
 #define MHI_UCI_NUM_WR_REQ_DEFAULT	10
 #define MAX_NR_TRBS_PER_CHAN		9
 #define MHI_QTI_IFACE_ID		4
+#define MHI_ADPL_IFACE_ID		5
+#define MHI_CV2X_IFACE_ID		6
 #define DEVICE_NAME			"mhi"
 #define MAX_DEVICE_NAME_SIZE		80
 
@@ -1414,6 +1416,67 @@ static long mhi_uci_client_ioctl(struct file *file, unsigned int cmd,
 			epinfo.ph_ep_info.peripheral_iface_id);
 
 		uci_log(UCI_DBG_DBG, "ipa_cons_idx:%d ipa_prod_idx:%d\n",
+			epinfo.ipa_ep_pair.cons_pipe_num,
+			epinfo.ipa_ep_pair.prod_pipe_num);
+
+		rc = copy_to_user((void __user *)arg, &epinfo,
+			sizeof(epinfo));
+		if (rc)
+			uci_log(UCI_DBG_ERROR, "copying to user space failed");
+	} else if (cmd == MHI_UCI_TIOCM_GET) {
+		rc = copy_to_user((void __user *)arg, &uci_handle->tiocm,
+			sizeof(uci_handle->tiocm));
+		if (rc) {
+			uci_log(UCI_DBG_ERROR,
+				"copying ctrl state to user space failed");
+			rc = -EFAULT;
+		}
+		uci_handle->at_ctrl_mask = 0;
+		uci_log(UCI_DBG_VERBOSE, "Completing at_ctrl_read_done");
+		complete(&uci_handle->at_ctrl_read_done);
+	} else if (cmd == MHI_UCI_TIOCM_SET) {
+		rc = get_user(tiocm, (unsigned int __user *)arg);
+		if (rc)
+			return rc;
+		rc = mhi_uci_ctrl_set_tiocm(uci_handle, tiocm);
+	} else if (cmd == MHI_UCI_DPL_EP_LOOKUP) {
+		uci_log(UCI_DBG_DBG, "DPL EP_LOOKUP for client:%d\n",
+			uci_handle->client_index);
+		epinfo.ph_ep_info.ep_type = DATA_EP_TYPE_PCIE;
+		epinfo.ph_ep_info.peripheral_iface_id = MHI_ADPL_IFACE_ID;
+		epinfo.ipa_ep_pair.prod_pipe_num =
+			ipa_get_ep_mapping(IPA_CLIENT_MHI_DPL_CONS);
+		/* For DPL set cons pipe to -1 to indicate it is unused */
+		epinfo.ipa_ep_pair.cons_pipe_num = -1;
+
+		uci_log(UCI_DBG_DBG, "client:%d ep_type:%d intf:%d\n",
+			uci_handle->client_index,
+			epinfo.ph_ep_info.ep_type,
+			epinfo.ph_ep_info.peripheral_iface_id);
+
+		uci_log(UCI_DBG_DBG, "DPL ipa_prod_idx:%d\n",
+			epinfo.ipa_ep_pair.prod_pipe_num);
+
+		rc = copy_to_user((void __user *)arg, &epinfo,
+			sizeof(epinfo));
+		if (rc)
+			uci_log(UCI_DBG_ERROR, "copying to user space failed");
+	} else if (cmd == MHI_UCI_CV2X_EP_LOOKUP) {
+		uci_log(UCI_DBG_DBG, "CV2X EP_LOOKUP for client:%d\n",
+						uci_handle->client_index);
+		epinfo.ph_ep_info.ep_type = DATA_EP_TYPE_PCIE;
+		epinfo.ph_ep_info.peripheral_iface_id = MHI_CV2X_IFACE_ID;
+		epinfo.ipa_ep_pair.cons_pipe_num =
+			ipa_get_ep_mapping(IPA_CLIENT_MHI2_PROD);
+		epinfo.ipa_ep_pair.prod_pipe_num =
+			ipa_get_ep_mapping(IPA_CLIENT_MHI2_CONS);
+
+		uci_log(UCI_DBG_DBG, "client:%d ep_type:%d intf:%d\n",
+			uci_handle->client_index,
+			epinfo.ph_ep_info.ep_type,
+			epinfo.ph_ep_info.peripheral_iface_id);
+
+		uci_log(UCI_DBG_DBG, "ipa_cons2_idx:%d ipa_prod2_idx:%d\n",
 			epinfo.ipa_ep_pair.cons_pipe_num,
 			epinfo.ipa_ep_pair.prod_pipe_num);
 
