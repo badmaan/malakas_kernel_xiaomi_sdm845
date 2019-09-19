@@ -296,6 +296,8 @@ bool wq_online;				/* can kworkers be created yet? */
 
 bool wq_online;				/* can kworkers be created yet? */
 
+bool wq_online;				/* can kworkers be created yet? */
+
 static bool wq_numa_enabled;		/* unbound NUMA affinity enabled */
 
 /* buf for wq_update_unbound_numa_attrs(), protected by CPU hotplug exclusion */
@@ -913,6 +915,26 @@ struct task_struct *wq_worker_sleeping(struct task_struct *task)
 	    !list_empty(&pool->worklist))
 		to_wakeup = first_idle_worker(pool);
 	return to_wakeup ? to_wakeup->task : NULL;
+}
+
+/**
+ * wq_worker_last_func - retrieve worker's last work function
+ *
+ * Determine the last function a worker executed. This is called from
+ * the scheduler to get a worker's last known identity.
+ *
+ * CONTEXT:
+ * spin_lock_irq(rq->lock)
+ *
+ * Return:
+ * The last work function %current executed as a worker, NULL if it
+ * hasn't executed any work yet.
+ */
+work_func_t wq_worker_last_func(struct task_struct *task)
+{
+	struct worker *worker = kthread_data(task);
+
+	return worker->last_func;
 }
 
 /**
@@ -2140,6 +2162,9 @@ __acquires(&pool->lock)
 	/* clear cpu intensive status */
 	if (unlikely(cpu_intensive))
 		worker_clr_flags(worker, WORKER_CPU_INTENSIVE);
+
+	/* tag the worker for identification in schedule() */
+	worker->last_func = worker->current_func;
 
 	/* we're done with it, release */
 	hash_del(&worker->hentry);

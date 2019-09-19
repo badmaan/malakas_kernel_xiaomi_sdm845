@@ -42,26 +42,10 @@
 #include <linux/rcupdate.h>
 #include <linux/profile.h>
 #include <linux/notifier.h>
-#include <linux/mutex.h>
-#include <linux/delay.h>
-#include <linux/swap.h>
-#include <linux/fs.h>
-#include <linux/cpuset.h>
-#include <linux/vmpressure.h>
-#include <linux/freezer.h>
 #include <linux/circ_buf.h>
 #include <linux/proc_fs.h>
 #include <linux/slab.h>
-
-#define CREATE_TRACE_POINTS
-#include <trace/events/almk.h>
-#include <linux/show_mem_notifier.h>
-
-#ifdef CONFIG_HIGHMEM
-#define _ZONE ZONE_HIGHMEM
-#else
-#define _ZONE ZONE_NORMAL
-#endif
+#include <linux/poll.h>
 
 #define CREATE_TRACE_POINTS
 #include "trace/lowmemorykiller.h"
@@ -118,20 +102,26 @@ struct lmk_event {
 	struct list_head list;
 };
 
-void handle_lmk_event(struct task_struct *selected, short min_score_adj)
+void handle_lmk_event(struct task_struct *selected, int selected_tasksize,
+		      short min_score_adj)
 {
 	int head;
 	int tail;
 	struct lmk_event *events;
 	struct lmk_event *event;
 	int res;
-	long rss_in_pages = -1;
-	struct mm_struct *mm = get_task_mm(selected);
+	char taskname[MAX_TASKNAME];
 
-	if (mm) {
-		rss_in_pages = get_mm_rss(mm);
-		mmput(mm);
-	}
+	res = get_cmdline(selected, taskname, MAX_TASKNAME - 1);
+
+	/* No valid process name means this is definitely not associated with a
+	 * userspace activity.
+	 */
+
+	if (res <= 0 || res >= MAX_TASKNAME)
+		return;
+
+	taskname[res] = '\0';
 
 	spin_lock(&lmk_event_lock);
 
@@ -147,18 +137,8 @@ void handle_lmk_event(struct task_struct *selected, short min_score_adj)
 	events = (struct lmk_event *) event_buffer.buf;
 	event = &events[head];
 
-	res = get_cmdline(selected, event->taskname, MAX_TASKNAME - 1);
+	memcpy(event->taskname, taskname, res + 1);
 
-	/* No valid process name means this is definitely not associated with a
-	 * userspace activity.
-	 */
-
-	if (res <= 0 || res >= MAX_TASKNAME) {
-		spin_unlock(&lmk_event_lock);
-		return;
-	}
-
-	event->taskname[res] = '\0';
 	event->pid = selected->pid;
 	event->uid = from_kuid_munged(current_user_ns(), task_uid(selected));
 	if (selected->group_leader)
@@ -169,7 +149,7 @@ void handle_lmk_event(struct task_struct *selected, short min_score_adj)
 	event->maj_flt = selected->maj_flt;
 	event->oom_score_adj = selected->signal->oom_score_adj;
 	event->start_time = nsec_to_clock_t(selected->real_start_time);
-	event->rss_in_pages = rss_in_pages;
+	event->rss_in_pages = selected_tasksize;
 	event->min_score_adj = min_score_adj;
 
 	event_buffer.head = (head + 1) & (MAX_BUFFERED_EVENTS - 1);
@@ -784,22 +764,17 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 		lowmem_deathpending_timeout = jiffies + HZ;
 		rem += selected_tasksize;
-
-		handle_lmk_event(selected, min_score_adj);
-		rcu_read_unlock();
-		/* give the system time to free up the memory */
-		msleep_interruptible(20);
-		trace_almk_shrink(selected_tasksize, ret,
-				  other_free, other_file,
-				  selected_oom_score_adj);
-	} else {
-		trace_almk_shrink(1, ret, other_free, other_file, 0);
-		rcu_read_unlock();
+		get_task_struct(selected);
 	}
 
 	lowmem_print(4, "lowmem_scan %lu, %x, return %lu\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
-	mutex_unlock(&scan_mutex);
+	rcu_read_unlock();
+
+	if (selected) {
+		handle_lmk_event(selected, selected_tasksize, min_score_adj);
+		put_task_struct(selected);
+	}
 	return rem;
 }
 
@@ -813,7 +788,6 @@ static struct shrinker lowmem_shrinker = {
 static int __init lowmem_init(void)
 {
 	register_shrinker(&lowmem_shrinker);
-	vmpressure_notifier_register(&lmk_vmpr_nb);
 	lmk_event_init();
 	return 0;
 }
