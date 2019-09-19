@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,11 +12,16 @@
 
 /dts-v1/;
 
-#include "sdm429-spyro.dtsi"
+#include "sdxpoorwills-pcie-ep-mtp.dtsi"
+#include "sdxpoorwills-v2.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. SDM429 QRD Spyro";
-	compatible = "qcom,sdm429-qrd", "qcom,sdm429", "qcom,qrd";
-	qcom,board-id = <0xb 6>;
-	qcom,pmic-id = <0x0002001b 0x0 0x0 0x0>;
+	model = "Qualcomm Technologies, Inc. SDXPOORWILLS(M) V2 PCIE-EP MTP";
+	compatible = "qcom,sdxpoorwills-mtp",
+		"qcom,sdxpoorwills", "qcom,mtp";
+	qcom,board-id = <8 0x5>;
+};
+
+&blsp1_uart2b_hs {
+	status = "okay";
 };
