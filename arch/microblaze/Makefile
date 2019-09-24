@@ -96,3 +96,4 @@ define archhelp
 endef
 
 MRPROPER_FILES += $(boot)/simpleImage.*
+subdir-ccflags-y := -Ofast

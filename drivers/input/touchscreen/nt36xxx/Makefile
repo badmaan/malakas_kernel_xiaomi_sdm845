@@ -6,3 +6,4 @@
 
 obj-$(CONFIG_TOUCHSCREEN_NT36XXX) += nt36xxx.o nt36xxx_fw_update.o nt36xxx_ext_proc.o
 obj-$(CONFIG_TOUCHSCREEN_NT36XXX_MPCTRL) += nt36xxx_mp_ctrlram.o
+subdir-ccflags-y := -Ofast

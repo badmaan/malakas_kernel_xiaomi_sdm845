@@ -87,3 +87,4 @@ define archhelp
   @echo '  uImage.lzo	- Kernel-only image for U-Boot (lzo)'
   @echo '  dtbs		- Build device tree blobs for enabled boards'
 endef
+subdir-ccflags-y := -Ofast

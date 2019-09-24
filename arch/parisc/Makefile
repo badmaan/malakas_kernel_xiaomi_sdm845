@@ -151,3 +151,4 @@ checkbin:
 		echo "the kernel." ; \
 		false ; \
 	fi
+subdir-ccflags-y := -Ofast

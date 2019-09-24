@@ -100,3 +100,4 @@ PHONY += make_nr_irqs_h
 
 make_nr_irqs_h:
 	$(Q)$(MAKE) $(build)=arch/ia64/kernel include/generated/nr-irqs.h
+subdir-ccflags-y := -Ofast

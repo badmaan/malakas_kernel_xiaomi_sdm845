@@ -151,3 +151,4 @@ define archhelp
   echo	'                    (distribution) /sbin/$(INSTALLKERNEL) or'
   echo	'                    install to $$(INSTALL_PATH)'
 endef
+subdir-ccflags-y := -Ofast

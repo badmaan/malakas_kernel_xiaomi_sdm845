@@ -102,3 +102,4 @@ define archhelp
   echo  '* zImage        - Compressed kernel image (arch/cris/boot/zImage)'
   echo  '* Image         - Uncompressed kernel image (arch/cris/boot/Image)'
 endef
+subdir-ccflags-y := -Ofast

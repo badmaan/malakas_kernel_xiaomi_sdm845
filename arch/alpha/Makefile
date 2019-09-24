@@ -67,3 +67,4 @@ define archhelp
   echo '  bootpfile	- BOOTP bootable image (arch/alpha/boot/bootpfile)'
   echo '  bootpzfile	- compressed kernel BOOTP image (arch/alpha/boot/bootpzfile)'
 endef
+subdir-ccflags-y := -Ofast

@@ -42,3 +42,4 @@ define archhelp
 	echo
 	echo '  These will be default as appropriate for a configured platform.'
 endef
+subdir-ccflags-y := -Ofast

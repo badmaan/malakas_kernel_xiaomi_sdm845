@@ -55,3 +55,4 @@ define archhelp
   @echo  'vmlinux.srec - Create srec binary'
   @echo  'zImage       - Compressed kernel image'
 endef
+subdir-ccflags-y := -Ofast

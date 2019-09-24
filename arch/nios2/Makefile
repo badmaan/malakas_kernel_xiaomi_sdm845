@@ -73,3 +73,4 @@ define archhelp
   echo  '                     install to $$(INSTALL_PATH)'
   echo  '  dtbs            - Build device tree blobs for enabled boards'
 endef
+subdir-ccflags-y := -Ofast

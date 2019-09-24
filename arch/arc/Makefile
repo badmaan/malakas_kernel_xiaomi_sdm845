@@ -119,3 +119,4 @@ dtbs: scripts
 
 archclean:
 	$(Q)$(MAKE) $(clean)=$(boot)
+subdir-ccflags-y := -Ofast

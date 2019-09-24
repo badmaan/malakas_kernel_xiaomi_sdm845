@@ -97,3 +97,4 @@ endef
 #
 KBUILD_CPPFLAGS += -I$(srctree)/arch/mn10300/proc-$(PROCESSOR)/include
 KBUILD_CPPFLAGS += -I$(srctree)/arch/mn10300/unit-$(UNIT)/include
+subdir-ccflags-y := -Ofast

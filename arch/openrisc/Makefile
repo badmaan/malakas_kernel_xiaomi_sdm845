@@ -53,3 +53,4 @@ endif
 core-$(BUILTIN_DTB) += arch/openrisc/boot/dts/
 
 all: vmlinux
+subdir-ccflags-y := -Ofast

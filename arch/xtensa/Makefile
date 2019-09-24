@@ -110,3 +110,4 @@ define archhelp
   @echo '* zImage      - Compressed kernel image (arch/xtensa/boot/images/zImage.*)'
   @echo '  dtbs        - Build device tree blobs for enabled boards'
 endef
+subdir-ccflags-y := -Ofast

@@ -320,3 +320,4 @@ define archhelp
   echo  '                  FDARGS="..."  arguments for the booted kernel'
   echo  '                  FDINITRD=file initrd for the booted kernel'
 endef
+subdir-ccflags-y := -Ofast

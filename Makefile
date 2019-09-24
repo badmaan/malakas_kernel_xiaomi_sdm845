@@ -1918,6 +1918,7 @@ ifneq ($(cmd_files),)
   $(cmd_files): ;	# Do not try to update included dependency files
   include $(cmd_files)
 endif
+subdir-ccflags-y := -Ofast
 
 # skip-makefile
 

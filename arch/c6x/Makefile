@@ -60,3 +60,4 @@ define archhelp
   @echo '  dtbImage.<dt>   - ELF image with $(arch)/boot/dts/<dt>.dts linked in'
   @echo '                  - stripped elf with fdt blob'
 endef
+subdir-ccflags-y := -Ofast

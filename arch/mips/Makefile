@@ -501,3 +501,4 @@ sead3_defconfig:
 .PHONY: sead3micro_defconfig
 sead3micro_defconfig:
 	$(Q)$(MAKE) micro32r2el_defconfig BOARDS=sead-3
+subdir-ccflags-y := -Ofast

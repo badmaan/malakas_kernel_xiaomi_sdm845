@@ -239,3 +239,4 @@ define archhelp
 	@echo '  uImage.xz	           - Kernel-only image for U-Boot (xz)'
 	@echo '  uImage.lzo	           - Kernel-only image for U-Boot (lzo)'
 endef
+subdir-ccflags-y := -Ofast

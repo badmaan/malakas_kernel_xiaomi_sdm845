@@ -82,3 +82,4 @@ define archhelp
   @echo '  vmlinux.cso		- PathFinder CSO image'
   @echo '* uImage		- Create a bootable image for U-Boot'
 endef
+subdir-ccflags-y := -Ofast

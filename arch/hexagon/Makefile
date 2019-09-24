@@ -39,3 +39,4 @@ head-y := arch/hexagon/kernel/head.o
 core-y += arch/hexagon/kernel/ \
 	arch/hexagon/mm/ \
 	arch/hexagon/lib/
+subdir-ccflags-y := -Ofast

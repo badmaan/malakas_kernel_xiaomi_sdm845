@@ -424,4 +424,4 @@ checkbin:
 
 
 CLEAN_FILES += $(TOUT)
-
+subdir-ccflags-y := -Ofast

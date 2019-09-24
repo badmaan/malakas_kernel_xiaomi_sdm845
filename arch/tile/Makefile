@@ -73,3 +73,4 @@ install:
 define archhelp
 	echo '  install         - install kernel into $(INSTALL_PATH)'
 endef
+subdir-ccflags-y := -Ofast
