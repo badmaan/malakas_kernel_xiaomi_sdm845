@@ -792,7 +792,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 	lowmem_print(4, "lowmem_scan %lu, %x, return %lu\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
-	mutex_unlock(&scan_mutex);
+	rcu_read_unlock();
 
 	if (selected) {
 		handle_lmk_event(selected, selected_tasksize, min_score_adj);
