@@ -1532,7 +1532,7 @@ static int f2fs_disable_checkpoint(struct f2fs_sb_info *sbi)
 		goto out_unlock;
 
 	spin_lock(&sbi->stat_lock);
-	sbi->unusable_block_count = unusable;
+	sbi->unusable_block_count = 0;
 	spin_unlock(&sbi->stat_lock);
 
 out_unlock:

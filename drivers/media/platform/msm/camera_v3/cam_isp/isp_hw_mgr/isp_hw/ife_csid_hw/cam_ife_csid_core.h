@@ -424,6 +424,9 @@ struct cam_ife_csid_cid_data {
  * @master_idx:     For Slave reservation, Give master IFE instance Index.
  *                  Slave will synchronize with master Start and stop operations
  * @clk_rate        Clock rate
+ * @usage_type      Usage type ie dual or single ife usecase
+ * @init_frame_drop init frame drop value. In dual ife case rdi need to drop one
+ *                  more frame than pix.
  *
  */
 struct cam_ife_csid_path_cfg {
@@ -442,6 +445,8 @@ struct cam_ife_csid_path_cfg {
 	enum cam_isp_hw_sync_mode       sync_mode;
 	uint32_t                        master_idx;
 	uint64_t                        clk_rate;
+	uint32_t                        usage_type;
+	uint32_t                        init_frame_drop;
 };
 
 /**
@@ -478,7 +483,13 @@ struct cam_ife_csid_path_cfg {
  * @irq_debug_cnt:            Counter to track sof irq's when above flag is set.
  * @error_irq_count           Error IRQ count, if continuous error irq comes
  *                            need to stop the CSID and mask interrupts.
- *
+ * @device_enabled            Device enabled will set once CSID powered on and
+ *                            initial configuration are done.
+ * @lock_state                csid spin lock
+ * @dual_usage                usage type, dual ife or single ife
+ * @init_frame_drop           Initial frame drop number
+ * @res_sof_cnt               path resource sof count value. it used for initial
+ *                            frame drop
  * @first_sof_ts              flag to mark the first sof has been registered
  * @ppi_hw_intf               interface to ppi hardware
  * @ppi_enabled               flag to specify if the hardware has ppi bridge

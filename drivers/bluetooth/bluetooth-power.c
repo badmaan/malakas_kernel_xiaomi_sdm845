@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2010, 2013-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2010, 2013-2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -608,6 +608,23 @@ static int bt_power_populate_dt_pinfo(struct platform_device *pdev)
 	bt_power_pdata->bt_power_setup = bluetooth_power;
 
 	return 0;
+}
+
+static int get_bt_reset_gpio_value(void)
+{
+	int rc = 0;
+	int bt_reset_gpio = bt_power_pdata->bt_gpio_sys_rst;
+
+	rc = gpio_request(bt_reset_gpio, "bt_sys_rst_n");
+	if (rc) {
+		BT_PWR_ERR("unable to request gpio %d (%d)\n",
+					bt_reset_gpio, rc);
+		return rc;
+	}
+
+	rc = gpio_get_value(bt_reset_gpio);
+	gpio_free(bt_power_pdata->bt_gpio_sys_rst);
+	return rc;
 }
 
 static int bt_power_probe(struct platform_device *pdev)

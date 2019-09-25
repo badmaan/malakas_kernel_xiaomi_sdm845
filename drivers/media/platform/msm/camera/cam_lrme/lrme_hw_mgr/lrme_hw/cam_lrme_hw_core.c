@@ -895,7 +895,6 @@ int cam_lrme_hw_stop(void *hw_priv, void *hw_stop_args, uint32_t arg_size)
 	} else {
 		CAM_ERR(CAM_LRME, "HW in wrong state %d", lrme_core->state);
 		rc = -EINVAL;
-		goto unlock;
 	}
 
 unlock:

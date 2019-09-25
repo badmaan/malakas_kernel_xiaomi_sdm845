@@ -48,6 +48,20 @@
 #include <linux/poll.h>
 
 #define CREATE_TRACE_POINTS
+#include <trace/events/almk.h>
+#include <linux/show_mem_notifier.h>
+
+#ifdef CONFIG_HIGHMEM
+#define _ZONE ZONE_HIGHMEM
+#else
+#define _ZONE ZONE_NORMAL
+#endif
+#include <linux/circ_buf.h>
+#include <linux/proc_fs.h>
+#include <linux/slab.h>
+#include <linux/poll.h>
+
+#define CREATE_TRACE_POINTS
 #include "trace/lowmemorykiller.h"
 
 /* to enable lowmemorykiller */
@@ -764,12 +778,21 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 		lowmem_deathpending_timeout = jiffies + HZ;
 		rem += selected_tasksize;
+		rcu_read_unlock();
 		get_task_struct(selected);
+		/* give the system time to free up the memory */
+		msleep_interruptible(20);
+		trace_almk_shrink(selected_tasksize, ret,
+				  other_free, other_file,
+				  selected_oom_score_adj);
+	} else {
+		trace_almk_shrink(1, ret, other_free, other_file, 0);
+		rcu_read_unlock();
 	}
 
 	lowmem_print(4, "lowmem_scan %lu, %x, return %lu\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
-	rcu_read_unlock();
+	mutex_unlock(&scan_mutex);
 
 	if (selected) {
 		handle_lmk_event(selected, selected_tasksize, min_score_adj);
@@ -788,6 +811,7 @@ static struct shrinker lowmem_shrinker = {
 static int __init lowmem_init(void)
 {
 	register_shrinker(&lowmem_shrinker);
+	vmpressure_notifier_register(&lmk_vmpr_nb);
 	lmk_event_init();
 	return 0;
 }

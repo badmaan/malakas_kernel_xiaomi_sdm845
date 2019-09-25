@@ -7330,8 +7330,8 @@ retry:
 			 */
 			spare_cap = capacity_orig - new_util;
 
-			if (idle_cpu(i))
-				idle_idx = idle_get_state_idx(cpu_rq(i));
+			if (cpu_check_overutil_condition(i, new_util))
+				continue;
 
 
 			/*
@@ -8225,7 +8225,7 @@ preempt:
 }
 
 static struct task_struct *
-pick_next_task_fair(struct rq *rq, struct task_struct *prev, struct pin_cookie cookie)
+pick_next_task_fair(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 {
 	struct cfs_rq *cfs_rq = &rq->cfs;
 	struct sched_entity *se;
@@ -8343,9 +8343,9 @@ idle:
 	 * further scheduler activity on it and we're being very careful to
 	 * re-start the picking loop.
 	 */
-	lockdep_unpin_lock(&rq->lock, cookie);
+	rq_unpin_lock(rq, rf);
 	new_tasks = idle_balance(rq);
-	lockdep_repin_lock(&rq->lock, cookie);
+	rq_repin_lock(rq, rf);
 	/*
 	 * Because idle_balance() releases (and re-acquires) rq->lock, it is
 	 * possible for any higher priority task to appear. In that case we
@@ -10331,6 +10331,8 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 		    (rq->nr_running == 1 || (rq->nr_running == 2 &&
 		     task_util(rq->curr) < sched_small_task_threshold)))
 			continue;
+
+		wl = weighted_cpuload(i);
 
 		wl = weighted_cpuload(rq);
 

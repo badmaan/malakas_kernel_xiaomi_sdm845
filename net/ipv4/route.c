@@ -499,7 +499,7 @@ void __ip_select_ident(struct net *net, struct iphdr *iph, int segs)
 	u32 hash, id;
 
 	/* Note the following code is not safe, but this is okay. */
-	if (unlikely(siphash_key_is_zero(&net->ipv4.ip_id_key)))
+	if (unlikely(&net->ipv4.ip_id_key))
 		get_random_bytes(&net->ipv4.ip_id_key,
 				 sizeof(net->ipv4.ip_id_key));
 

@@ -103,6 +103,12 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 	if (unlikely(sg_policy->need_freq_update))
 		return true;
 
+	/* No need to recalculate next freq for min_rate_limit_us
+	 * at least. However we might still decide to further rate
+	 * limit once frequency change direction is decided, according
+	 * to the separate rate limits.
+	 */
+
 	delta_ns = time - sg_policy->last_freq_update_time;
 
 	/* No need to recalculate next freq for min_rate_limit_us at least */
@@ -148,6 +154,9 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	}
 
 	if (sg_policy->next_freq == next_freq)
+		return;
+
+	if (sugov_up_down_rate_limit(sg_policy, time, next_freq))
 		return;
 
 	sg_policy->next_freq = next_freq;
@@ -448,6 +457,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 			sg_policy->cached_raw_freq = 0;
 		}
 	}
+
 	sugov_update_commit(sg_policy, time, next_f);
 	raw_spin_unlock(&sg_policy->update_lock);
 }

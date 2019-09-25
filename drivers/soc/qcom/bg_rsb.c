@@ -861,6 +861,12 @@ static int store_enable(struct device *pdev, struct device_attribute *attr,
 	if (!arr)
 		return -ENOMEM;
 
+	if (dev->blk_rsb_cmnds) {
+		pr_err("Device is in TWM state\n");
+		kfree(arr);
+		return count;
+	}
+
 	if (!dev->is_cnfgrd) {
 		kfree(arr);
 		return -ENOMEDIUM;
