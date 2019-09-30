@@ -3,15 +3,13 @@ rm -rf /out
 make kernelversion
 date
 export ARCH=arm64 && export SUBARCH=arm64 malakas_polaris_defconfig
-#/scripts/config -e CLANG_LTO
-#make ARCH=arm64 oldconfig
-export CROSS_COMPILE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
-export CROSS_COMPILE_ARM32=~/TOOLCHAIN/arm-linux-gnueabi/bin/arm-linux-gnueabi-
-#export CC=~/TOOLCHAIN/clang/bin/clang 
-#export CLANG_TRIPLE=~/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=/home/x/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+export CROSS_COMPILE_ARM32=/home/x/TOOLCHAIN/arm-linux-gnueabi/bin/arm-linux-gnueabi-
+export CC=/usr/lib/llvm-10/bin/clang
+export CLANG_TRIPLE=/home/x/TOOLCHAIN/aarch64-linux-gnu/bin/aarch64-linux-gnu-
 #export LD=~/TOOLCHAIN/aarch64-linux-gnu/aarch64-linux-gnu/bin/
 #export LDGOLD=~/TOOLCHAIN/aarch64-linux-gnu/aarch64-linux-gnu/bin/
-#export LDLLD=~/TOOLCHAIN/clang/bin/
+export LDLLD=/usr/bin/ld.lld-10
 export KBUILD_BUILD_USER=thanas
 export KBUILD_BUILD_HOST=MLX
 export PATH=~/bin:$PATH
