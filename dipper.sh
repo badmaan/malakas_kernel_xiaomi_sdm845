@@ -25,9 +25,9 @@ make -j$(nproc --all) O=out
 mv out/arch/arm64/boot/Image.gz-dtb ~/TOOLCHAIN/anykernel/Image.gz-dtb
 rm -rf out
 cd ~/TOOLCHAIN/anykernel
-zip -r malakas_kernel_dipper_$(date +"%Y-%m-%d").zip *
+zip -r malakas_kernel_q_dipper_$(date +"%Y-%m-%d").zip *
 rm -rf Image.gz-dtb
-mv malakas_kernel_dipper_$(date +"%Y-%m-%d").zip ~/Desktop/MLX/
+mv malakas_kernel_q_dipper_$(date +"%Y-%m-%d").zip ~/Desktop/MLX/
 cd ~/Desktop/MLX/
 ls
 date

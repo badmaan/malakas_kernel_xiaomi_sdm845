@@ -25,9 +25,9 @@ make -j$(nproc --all) O=out
 mv out/arch/arm64/boot/Image.gz-dtb ~/TOOLCHAIN/anykernel/Image.gz-dtb
 rm -rf out
 cd ~/TOOLCHAIN/anykernel
-zip -r malakas_kernel_beryllium_69-65hz_$(date +"%Y-%m-%d").zip *
+zip -r malakas_kernel_q_beryllium_69-65hz_$(date +"%Y-%m-%d").zip *
 rm -rf Image.gz-dtb
-mv malakas_kernel_beryllium_69-65hz_$(date +"%Y-%m-%d").zip ~/Desktop/MLX/
+mv malakas_kernel_q_beryllium_69-65hz_$(date +"%Y-%m-%d").zip ~/Desktop/MLX/
 cd ~/Desktop/MLX/
 ls
 date
@@ -35,7 +35,7 @@ adb kill-server
 adb tcpip 5555
 adb connect 192.168.3.101:5555
 sleep 2
-adb push malakas_kernel_beryllium_69-65hz_$(date +"%Y-%m-%d").zip /sdcard/MLX/malakas_kernel_beryllium_69-65hz_-$(date +"%Y-%m-%d").zip
+adb push malakas_kernel_q_beryllium_69-65hz_$(date +"%Y-%m-%d").zip /sdcard/MLX/malakas_kernel_q_beryllium_69-65hz_-$(date +"%Y-%m-%d").zip
 adb reboot recovery
 
 
