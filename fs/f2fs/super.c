@@ -2680,7 +2680,8 @@ int f2fs_sanity_check_ckpt(struct f2fs_sb_info *sbi)
 	}
 
 	valid_node_count = le32_to_cpu(ckpt->valid_node_count);
-	avail_node_count = sbi->total_node_count - F2FS_RESERVED_NODE_NUM;
+	avail_node_count = sbi->total_node_count - sbi->nquota_files -
+						F2FS_RESERVED_NODE_NUM;
 	if (valid_node_count > avail_node_count) {
 		f2fs_msg(sbi->sb, KERN_ERR,
 			"Wrong valid_node_count: %u, avail_node_count: %u",
