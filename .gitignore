@@ -122,3 +122,8 @@ net/wireguard/
 
 # Ignore compiled objects
 obj
+
+#MALAKAS
+dipper.sh
+polaris.sh
+zeggi.sh

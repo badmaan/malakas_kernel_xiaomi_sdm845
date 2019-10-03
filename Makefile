@@ -117,6 +117,8 @@ export quiet Q KBUILD_VERBOSE
 # KBUILD_SRC is not intended to be used by the regular user (for now)
 ifeq ($(KBUILD_SRC),)
 
+KBUILD_OUTPUT := out
+
 # OK, Make called in directory where kernel src resides
 # Do we want to locate output files in a separate directory?
 ifeq ("$(origin O)", "command line")
@@ -139,7 +141,7 @@ ifneq ($(KBUILD_OUTPUT),)
 # check that the output directory actually exists
 saved-output := $(KBUILD_OUTPUT)
 KBUILD_OUTPUT := $(shell mkdir -p $(KBUILD_OUTPUT) && cd $(KBUILD_OUTPUT) \
-								&& pwd)
+								&& /bin/pwd)
 $(if $(KBUILD_OUTPUT),, \
      $(error failed to create output directory "$(saved-output)"))
 
@@ -344,8 +346,8 @@ include scripts/Kbuild.include
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
 LDGOLD		= $(CROSS_COMPILE)ld.gold
-LDLLD		= /usr/bin/ld.lld-10
-CC		= $(CROSS_COMPILE)gcc
+LDLLD		= ld.lld
+CC		= $(CROSS_COMPILE)gcc-9
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -391,11 +393,11 @@ LINUXINCLUDE    := \
 LINUXINCLUDE	+= $(filter-out $(LINUXINCLUDE),$(USERINCLUDE))
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -pipe \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -std=gnu89
+		   -std=gnu89 -fdiagnostics-color=always
 
 # Optimization for sdm845
 KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55+crc+crypto -Wno-attribute-alias
@@ -414,20 +416,6 @@ KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 LDFLAGS :=
 GCC_PLUGINS_CFLAGS :=
 CLANG_FLAGS :=
-
-# Add Some optimization flags for clang
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS   += -Ofast -ffast-math -march=armv8.3-a+crypto -mtune=cortex-a75.cortex-a55 -fopenmp
-KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-parallel -lgomp \
-		   -mllvm -polly-run-dce \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-opt-fusion=max \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-detect-keep-going \
-		   -mllvm -polly-vectorizer=stripmine \
-		   -mllvm -polly-invariant-load-hoisting
-endif
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
 KERNELRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
@@ -534,7 +522,7 @@ endif
 
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
-CLANG_TRIPLE	?= $(CROSS_COMPILE)
+CLANG_TRIPLE    ?= $(CROSS_COMPILE)
 CLANG_FLAGS	+= --target=$(notdir $(CLANG_TRIPLE:%-=%))
 ifeq ($(shell $(srctree)/scripts/clang-android.sh $(CC) $(CLANG_FLAGS)), y)
 $(error "Clang with Android --target detected. Did you specify CLANG_TRIPLE?")
@@ -563,8 +551,13 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
 KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
 CLANG_FLAGS	+= -no-integrated-as
+CLANG_FLAGS	+= -Werror=unknown-warning-option
+ifeq ($(ld-name),lld)
+CLANG_FLAGS	+= -fuse-ld=$(shell which $(LD))
+endif
+KBUILD_CPPFLAGS	+= -Qunused-arguments
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
-KBUILD_AFLAGS	+= $(CLANG_FLAGS)
+KBUILD_AFLAGS	+= $(CLANG_FLAGS) -no-integrated-as
 else
 
 # These warnings generated too much noise in a regular build.
@@ -689,12 +682,13 @@ LDFINAL_vmlinux := $(LD)
 LD		:= $(LDGOLD)
 endif
 ifdef CONFIG_LD_LLD
-LD		:= /usr/bin/ld.lld-10
+LD		:= $(LDLLD)
 endif
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
-KBUILD_LDFLAGS	+= -Ofast
+KBUILD_LDFLAGS	+= -O3
+CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage -fno-tree-loop-im $(call cc-disable-warning,maybe-uninitialized,)
 CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage \
 	$(call cc-option,-fno-tree-loop-im) \
 	$(call cc-disable-warning,maybe-uninitialized,)
@@ -706,34 +700,36 @@ export CFLAGS_GCOV CFLAGS_KCOV
 ifdef CONFIG_LD_GOLD
 LDFINAL_vmlinux := $(LD)
 LD		:= $(LDGOLD)
-LDFLAGS		+= -Ofast
+LDFLAGS		+= -O3 
 endif
 ifdef CONFIG_LD_LLD
-LD		:= /usr/bin/ld.lld-10
+LD		:= $(LDLLD)
 endif
 
 ifeq ($(cc-name),clang)
 ifeq ($(ld-name),lld)
 KBUILD_CFLAGS	+= -fuse-ld=lld
-KBUILD_LDFLAGS	+= -Ofast
-LDFLAGS_vmlinux	+= $(call ld-option, -Ofast,)
+KBUILD_LDFLAGS	+= -O3
 endif
 endif
 
 ifdef CONFIG_LTO_CLANG
-# use GNU gold and LD for vmlinux_link, or LLD for LTO linking
+# use GNU gold with LLVMgold or LLD for LTO linking, and LD for vmlinux_link
 ifeq ($(ld-name),gold)
 LDFLAGS		+= -plugin LLVMgold.so
-LDFLAGS		+= --plugin-opt=Ofast
+LDFLAGS		+= --plugin-opt=O3
 endif
 LDFLAGS		+= -plugin-opt=-function-sections
 LDFLAGS		+= -plugin-opt=-data-sections
 LDFLAGS		+= -plugin-opt=new-pass-manager
+LDFLAGS		+= -plugin-opt=mcpu=kryo
 # use llvm-ar for building symbol tables from IR files, and llvm-dis instead
 # of objdump for processing symbol versions and exports
 LLVM_AR		:= llvm-ar
 LLVM_DIS	:= llvm-dis
 export LLVM_AR LLVM_DIS
+# Set O3 optimization level for LTO
+LDFLAGS		+= --plugin-opt=O3
 endif
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
@@ -766,42 +762,46 @@ endif
 
 ifdef CONFIG_LTO_CLANG
 ifdef CONFIG_THINLTO
-lto-clang-flags := -flto=thin
-KBUILD_LDFLAGS += --thinlto-cache-dir=.thinlto-cache
+lto-clang-flags := -flto=thin -fsplit-lto-unit
+ifdef THINLTO_CACHE
+ifeq ($(ld-name),lld)
+LDFLAGS		+= --thinlto-cache-dir=$(THINLTO_CACHE)
+LDFLAGS		+= --thinlto-cache-policy=cache_size=5%:cache_size_bytes=5g
+else
+LDFLAGS		+= -plugin-opt,cache-dir=$(THINLTO_CACHE)
+LDFLAGS		+= -plugin-opt,cache-policy=cache_size=5%:cache_size_bytes=5g
+endif
+endif
 else
 lto-clang-flags	:= -flto
+LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
 endif
-lto-clang-flags += -fvisibility=hidden -Ofast
-ifdef CONFIG_LTO_CLANG_THIN
-lto-clang-flags	:= -flto=thin -fvisibility=hidden
-else
-lto-clang-flags	:= -flto -fvisibility=hidden
-endif
+lto-clang-flags += -fvisibility=hidden
 
 # allow disabling only clang LTO where needed
 DISABLE_LTO_CLANG := -fno-lto -fvisibility=default
 export DISABLE_LTO_CLANG
 endif
 
-ifdef CONFIG_LTO
-lto-flags	:= $(lto-clang-flags)
-KBUILD_CFLAGS	+= $(lto-flags)
+#ifdef CONFIG_LTO
+#lto-flags	:= $(lto-clang-flags)
+#KBUILD_CFLAGS	+= $(lto-flags)
 
-ifeq ($(ld-name),lld)
-LDFLAGS		+= --lto-Ofast
-endif
+#ifeq ($(ld-name),lld)
+#LDFLAGS		+= --lto-O3
+#endif
 
-ifeq ($(ld-name),lld)
-LDFLAGS		+= --lto-Ofast
-endif
+#ifeq ($(ld-name),lld)
+#LDFLAGS		+= --lto-O3
+#endif
 
-DISABLE_LTO	:= $(DISABLE_LTO_CLANG)
-export DISABLE_LTO
+#DISABLE_LTO	:= $(DISABLE_LTO_CLANG)
+#export DISABLE_LTO
 
 # LDFINAL_vmlinux and LDFLAGS_FINAL_vmlinux can be set to override
 # the linker and flags for vmlinux_link.
-export LDFINAL_vmlinux LDFLAGS_FINAL_vmlinux
-endif
+#export LDFINAL_vmlinux LDFLAGS_FINAL_vmlinux
+#endif
 
 ifdef CONFIG_CFI_CLANG
 cfi-clang-flags	+= -fsanitize=cfi $(call cc-option, -fsplit-lto-unit)
@@ -830,6 +830,13 @@ DISABLE_LTO	+= $(DISABLE_CFI)
 export DISABLE_CFI
 endif
 
+ifdef CONFIG_SHADOW_CALL_STACK
+scs-flags	:= -fsanitize=shadow-call-stack
+KBUILD_CFLAGS	+= $(scs-flags)
+DISABLE_SCS	:= -fno-sanitize=shadow-call-stack
+export DISABLE_SCS
+endif
+
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
@@ -840,15 +847,67 @@ KBUILD_CFLAGS   += -Ofast
 endif
 endif
 
+ifdef CONFIG_SAFESTACK
+safestack-flags	+= -fsanitize=safe-stack
+safestack-extra-flags += -mllvm -safestack-use-pointer-address
+endif
+
+ifdef CONFIG_SAFESTACK_COLORING
+safestack-extra-flags += -mllvm -safe-stack-coloring=1
+KBUILD_CFLAGS   += -Ofast
+endif
+
+ifdef CONFIG_LTO_CLANG
+# if we use LLVMgold, pass extra flags to ld.gold
+LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
+endif
+
+ifdef CONFIG_SAFESTACK_COLORING
+LDFLAGS		+= -plugin-opt=-safe-stack-coloring=1
+endif
+
 ifeq ($(cc-name),clang)
 KBUILD_CFLAGS	+= -Ofast
 endif
 
-ifdef CONFIG_SHADOW_CALL_STACK
-scs-flags	:= -fsanitize=shadow-call-stack
-KBUILD_CFLAGS	+= $(scs-flags)
-DISABLE_SCS	:= -fno-sanitize=shadow-call-stack
-export DISABLE_SCS
+# Add Some optimization flags for clang
+ifeq ($(cc-name),clang)
+
+KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
+KBUILD_CFLAGS	+= $(call cc-option,-fdata-sections,)
+KBUILD_CFLAGS   += -Ofast -ffast-math -march=armv8.3-a+crc+crypto -mtune=cortex-a75.cortex-a55 -fopenmp -Wno-attribute-alias
+KBUILD_CFLAGS	+= -mllvm -polly \
+		   -mllvm -polly-parallel -lgomp \
+		   -mllvm -polly-run-dce \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-opt-fusion=max \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-detect-keep-going \
+		   -mllvm -polly-vectorizer=stripmine \
+		   -mllvm -polly-invariant-load-hoisting
+		   lto-clang-flags  := -flto 
+LDFLAGS    += -plugin-opt,cache-policy=cache_size=5%:cache_size_bytes=5g
+LDFLAGS    += -plugin LLVMgold.so
+LDFLAGS    += --plugin-opt=O3
+LDFINAL_vmlinux := $(LDGOLD)
+LD    := $(LDGOLD)
+LDFLAGS    += -O3 
+LDFLAGS		+= -plugin-opt=-function-sections
+LDFLAGS		+= -plugin-opt=-data-sections
+LDFLAGS		+= -plugin-opt=new-pass-manager
+LDFLAGS		+= -plugin-opt=mcpu=kryo
+LLVM_AR		:= llvm-ar
+LLVM_DIS	:= llvm-dis
+LDFLAGS		+= --plugin-opt=O3
+LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
+endif
+
+ifdef CONFIG_SAFESTACK
+# safestack-flags are re-tested in prepare-compiler-check
+KBUILD_CFLAGS	+= $(call cc-option, $(safestack-flags))
+KBUILD_CFLAGS	+= $(call cc-option, $(safestack-extra-flags))
+DISABLE_SAFESTACK := -fno-sanitize=safe-stack
+export DISABLE_SAFESTACK
 endif
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
@@ -943,6 +1002,7 @@ KBUILD_CPPFLAGS += $(call cc-option,-Qunused-arguments,)
 KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
+KBUILD_CFLAGS += $(call cc-disable-warning, pointer-bool-conversion)
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
 KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 # CLANG uses a _MergedGlobals as optimization, but this breaks modpost, as the
@@ -957,6 +1017,9 @@ else
 # These warnings generated too much noise in a regular build.
 # Use make W=1 to enable them (see scripts/Makefile.extrawarn)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
+KBUILD_CFLAGS += $(call cc-disable-warning, attribute-alias)
+KBUILD_CFLAGS += $(call cc-disable-warning, packed-not-aligned)
+KBUILD_CFLAGS += $(call cc-disable-warning, stringop-truncation)
 endif
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
@@ -971,6 +1034,11 @@ else
 ifndef CONFIG_FUNCTION_TRACER
 KBUILD_CFLAGS	+= -fomit-frame-pointer
 endif
+endif
+
+# Initialize all stack variables with a pattern, if desired.
+ifdef CONFIG_INIT_STACK_ALL
+KBUILD_CFLAGS	+= -ftrivial-auto-var-init=pattern
 endif
 
 KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
@@ -1190,6 +1258,7 @@ virt-y		:= $(patsubst %/, %/built-in.o, $(virt-y))
 # Externally visible symbols (used by link-vmlinux.sh)
 export KBUILD_VMLINUX_INIT := $(head-y) $(init-y)
 export KBUILD_VMLINUX_MAIN := $(core-y) $(libs-y) $(drivers-y) $(net-y) $(virt-y)
+export KBUILD_VMLINUX_LIBS := $(libs-y1)
 export KBUILD_LDS          := arch/$(SRCARCH)/kernel/vmlinux.lds
 export LDFLAGS_vmlinux
 # used by scripts/pacmage/Makefile
@@ -1982,14 +2051,15 @@ cmd_crmodverdir = $(Q)mkdir -p $(MODVERDIR) \
 # read all saved command lines
 
 cmd_files := $(wildcard .*.cmd $(foreach f,$(sort $(targets)),$(dir $(f)).$(notdir $(f)).cmd))
+cmd_files := $(wildcard .*.cmd $(foreach f,$(targets),$(dir $(f)).$(notdir $(f)).cmd))
 
 ifneq ($(cmd_files),)
   $(cmd_files): ;	# Do not try to update included dependency files
   include $(cmd_files)
-endif
+
 subdir-ccflags-y := -Ofast
 
-# skip-makefile
+endif	# skip-makefile
 
 PHONY += FORCE
 FORCE:
