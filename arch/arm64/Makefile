@@ -99,8 +99,8 @@ endif
 KBUILD_CFLAGS	+= -fno-pic
 KBUILD_AFLAGS	+= $(lseinstr) $(vdso32)
 
-KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
-KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
+#KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
+#KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
 
 ifeq ($(cc-name),clang)
 KBUILD_CFLAGS	+= -DCONFIG_ARCH_SUPPORTS_INT128
