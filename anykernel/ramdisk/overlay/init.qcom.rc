@@ -1,0 +1,128 @@
+on init
+    write /sys/kernel/debug/sched_features NO_ENERGY_AWARE
+    write /dev/stune/schedtune.prefer_idle 1
+    write /dev/stune/schedtune.boost 100
+	write /dev/stune/foreground/schedtune.prefer_idle 1
+	write /proc/sys/vm/page-cluster 0
+    write /sys/devices/soc/${ro.boot.bootdevice}/clkscale_enable 0
+    write /sys/devices/soc/${ro.boot.bootdevice}/clkgate_enable 0
+    write /sys/devices/soc/${ro.boot.bootdevice}/hibern8_on_idle_enable 0
+    write /sys/module/lpm_levels/parameters/sleep_disabled Y
+    write /dev/cpuset/top-app/cpus "0-7"
+    write /sys/block/sda/queue/iostats 0
+    write /sys/block/sda/queue/scheduler cfq
+    write /sys/block/sda/queue/iosched/slice_idle 0
+    write /sys/block/sda/queue/read_ahead_kb 2048
+    write /sys/block/sda/queue/nr_requests 256
+    write /sys/block/sdf/queue/iostats 0
+    write /sys/block/sdf/queue/scheduler cfq
+    write /sys/block/sdf/queue/iosched/slice_idle 0
+    write /sys/block/sdf/queue/read_ahead_kb 2048
+    write /sys/block/sdf/queue/nr_requests 256
+    write /sys/block/dm-0/queue/read_ahead_kb 2048
+    write /sys/block/dm-1/queue/read_ahead_kb 2048
+    write /sys/block/dm-2/queue/read_ahead_kb 2048
+    
+on boot
+   
+on post-fs
+
+on late-fs
+    write /sys/block/dm-3/queue/read_ahead_kb 2048
+    write /sys/block/sda/queue/iostats 0
+	write /sys/block/sda/queue/scheduler cfq
+	write /sys/block/sda/queue/iosched/slice_idle 0
+	write /sys/block/sda/queue/read_ahead_kb 2048
+	write /sys/block/sda/queue/nr_requests 256
+	write /sys/block/sde/queue/iostats 0
+	write /sys/block/sde/queue/scheduler cfq
+	write /sys/block/sde/queue/iosched/slice_idle 0
+	write /sys/block/sde/queue/read_ahead_kb 2048
+	write /sys/block/sde/queue/nr_requests 256
+    write /sys/devices/system/cpu/cpufreq/policy0/scaling_governor performance
+    write /sys/devices/system/cpu/cpufreq/policy4/scaling_governor performance
+
+on property:sys.boot_completed=1
+    write /sys/kernel/debug/sched_features ENERGY_AWARE
+    write /sys/devices/soc/${ro.boot.bootdevice}/clkscale_enable 1
+    write /sys/devices/soc/${ro.boot.bootdevice}/clkgate_enable 1
+    write /sys/devices/soc/${ro.boot.bootdevice}/hibern8_on_idle_enable 1
+    write /sys/module/lpm_levels/parameters/sleep_disabled N
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chown system system /sys/class/kgsl/kgsl-3d0/devfreq/max_freq
+    chown system system /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+    chown system system /sys/class/kgsl/kgsl-3d0/devfreq/governor
+    chmod 0664 /sys/class/kgsl/kgsl-3d0/devfreq/max_freq
+    chmod 0664 /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+    chmod 0664 /sys/class/kgsl/kgsl-3d0/devfreq/governor
+    chown system system /sys/module/sync/parameters/fsync_enabled
+    chmod 0664 /sys/module/sync/parameters/fsync_enabled
+    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 710000000
+    write /sys/module/sync/parameters/fsync_enabled N
+    write /dev/stune/schedtune.prefer_idle 0
+    write /dev/stune/schedtune.prefer_idle 0
+    write /dev/stune/schedtune.boost 0
+    write /sys/devices/system/cpu/cpufreq/policy0/scaling_governor schedutil
+    write /sys/devices/system/cpu/cpufreq/policy4/scaling_governor schedutil
+    write /sys/class/kgsl/kgsl-3d0/force_no_nap 0
+    write /sys/class/kgsl/kgsl-3d0/throttling 0
+    write /sys/module/printk/parameters/console_suspend Y
+    write /sys/block/sda/queue/read_ahead_kb 128
+    write /sys/block/sda/queue/nr_requests 128
+    write /sys/block/sda/queue/iostats 0
+    write /sys/block/sdf/queue/read_ahead_kb 128
+    write /sys/block/sdf/queue/nr_requests 128
+    write /sys/block/sdf/queue/iostats 0
+    write /sys/block/dm-0/queue/read_ahead_kb 128
+    write /sys/block/dm-1/queue/read_ahead_kb 128
+    write /sys/block/dm-2/queue/read_ahead_kb 128
+    write /sys/block/dm-3/queue/read_ahead_kb 128
+    write /sys/class/thermal/thermal_message/sconfig "10"
+    write > /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq "825600"
+    write > /sys/devices/system/cpu/cpu5/cpufreq/scaling_min_freq "825600"
+    write > /sys/devices/system/cpu/cpu6/cpufreq/scaling_min_freq "825600"
+    write > /sys/devices/system/cpu/cpu7/cpufreq/scaling_min_freq "825600"
+    write > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq "300000"
+    write > /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq "300000"
+    write > /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq "300000"
+    write > /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq "300000"
+    write /d/tracing/tracing_on 0
+    write /d/tracing/events/ext4/enable 0
+    write /d/tracing/events/f2fs/enable 0
+    write /d/tracing/events/block/enable 0
+    setprop sys.use_fifo_ui 1
+    setprop persist.radio.add_power_save 1
+    setprop debug.composition.type c2d
+    setprop debug.mdpcomp.idletime 600
+    setprop persist.hwc.mdpcomp.enable true
+    setprop persist.hwc.ptor.enable true
+    setprop debug.enable.sglscale 1
+    setprop debug.sf.hw 1
+    setprop debug.egl.hw 1
+    setprop debug.sf.disable_hwc 0
+    setprop debug.sf.recomputecrop 0
+    setprop debug.sf.disable_backpressure 1
+    setprop debug.sf.latch_unsignaled 1
+    setprop persist.hwc.mdpcomp.enable true
+    setprop persist.hwc.ptor.enable true
+    setprop debug.sf.gpu_comp_tiling 1
+    setprop debug.performance.tuning 1
+    setprop video.accelerate.hw 1
+    
+on charger
+    write /sys/devices/soc/${ro.boot.bootdevice}/clkscale_enable 1
+    write /sys/devices/soc/${ro.boot.bootdevice}/clkgate_enable 1
+    write /sys/devices/soc/${ro.boot.bootdevice}/hibern8_on_idle_enable 1
+    write /sys/class/typec/port0/port_type sink
+    write /sys/module/lpm_levels/parameters/sleep_disabled N
