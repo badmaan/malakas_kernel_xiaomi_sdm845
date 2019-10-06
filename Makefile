@@ -529,7 +529,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, address-of-packed-member)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
-KBUILD_CFLAGS += -Wno-undefined-optimized
+#KBUILD_CFLAGS += -Wno-undefined-optimized
 KBUILD_CFLAGS += -Wno-tautological-constant-out-of-range-compare
 
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
@@ -835,10 +835,10 @@ safestack-extra-flags += -mllvm -safe-stack-coloring=1
 KBUILD_CFLAGS   += -Ofast
 endif
 
-ifdef CONFIG_LTO_CLANG
+#ifdef CONFIG_LTO_CLANG
 # if we use LLVMgold, pass extra flags to ld.gold
-LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
-endif
+#LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
+#endif
 
 ifdef CONFIG_SAFESTACK_COLORING
 LDFLAGS		+= -plugin-opt=-safe-stack-coloring=1
@@ -875,16 +875,16 @@ LDFLAGS		+= -O3
 # This doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
-KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
+#KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
 endif
 
 ifeq ($(cc-name),clang)
 # Add Some optimization flags for clang
-KBUILD_CFLAGS	+= -Ofast -march=armv8.3-a+crc+crypto -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55
+KBUILD_CFLAGS	+= -Ofast -march=armv8.3-a+crc+crypto -ffast-math -mcpu=cortex-a55 -mtune=cortex-a55
 endif
 
 ifdef CONFIG_POLLY_CLANG
-KBUILD_CFLAGS	+= KBUILD_CFLAGS   += -fopenmp 
+KBUILD_CFLAGS	+= -fopenmp 
 KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-parallel -lgomp \
 		   -mllvm -polly-run-dce \

@@ -3,7 +3,7 @@
 rm -rf /out
 make kernelversion
 date
-###coonfig ccache
+###config ccache
 export USE_CCACHE=1
 export USE_PREBUILT_CACHE=1
 export PREBUILT_CACHE_DIR=~/.ccache
