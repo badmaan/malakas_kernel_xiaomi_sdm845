@@ -864,9 +864,13 @@ endif
 ifeq ($(cc-name),gcc)
  #Optimization for sdm845
 KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -funroll-loops -frename-registers 
-##KBUILD_CFLAGS  += -fprofile-generate
-##KBUILD_CFLAGS   += -fprofile-use -fprofile-correction 
-LDFLAGS		+= -O3
+#KBUILD_CFLAGS	+=  -fprofile-generate
+##KBUILD_CFLAGS	+=  -fprofile-use -fprofile-correction 
+KBUILD_CFLAGS	+= -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block 
+KBUILD_CFLAGS	+= -ftree-vectorize
+
+#LDFLAGS	+= -fuse-linker-plugin
+LDFLAGS		+= -O3 
 
 # This doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
@@ -892,7 +896,7 @@ KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-invariant-load-hoisting
 # Add EXP New Pass Manager for clang
 KBUILD_CFLAGS	+= -fexperimental-new-pass-manager
-LDFLAGS		+= -O3
+LDFLAGS		+= -O3 
 
 endif
 
