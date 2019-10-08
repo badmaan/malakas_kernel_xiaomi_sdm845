@@ -344,7 +344,6 @@ include scripts/Kbuild.include
 # Make variables (CC, etc...)
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= $(CROSS_COMPILE)gcc
 LDGOLD		= $(CROSS_COMPILE)ld.gold
 LDLLD		= ld.lld
 CC		= $(CROSS_COMPILE)gcc
@@ -835,10 +834,10 @@ safestack-extra-flags += -mllvm -safe-stack-coloring=1
 KBUILD_CFLAGS   += -Ofast
 endif
 
-#ifdef CONFIG_LTO_CLANG
-# if we use LLVMgold, pass extra flags to ld.gold
-#LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
-#endif
+ifdef CONFIG_LTO_CLANG
+ if we use LLVMgold, pass extra flags to ld.gold
+LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
+endif
 
 ifdef CONFIG_SAFESTACK_COLORING
 LDFLAGS		+= -plugin-opt=-safe-stack-coloring=1
@@ -854,7 +853,7 @@ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
 ifdef CONFIG_PROFILE_ALL_BRANCHES
-KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= -Ofast $(call cc-disable-warning,maybe-uninitialized,)
 else
 KBUILD_CFLAGS	+= -Ofast
 endif
@@ -862,20 +861,31 @@ endif
 
 #THANAS
 ifeq ($(cc-name),gcc)
- #Optimization for sdm845
-KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -funroll-loops -frename-registers 
+# Optimization for gcc sdm845
+KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -funroll-loops -frename-registers -fomit-frame-pointer -fopenmp -D_GLIBCXX_PARALLEL 
 #KBUILD_CFLAGS	+=  -fprofile-generate
 ##KBUILD_CFLAGS	+=  -fprofile-use -fprofile-correction 
 KBUILD_CFLAGS	+= -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block 
-KBUILD_CFLAGS	+= -ftree-vectorize
+KBUILD_CFLAGS	+= -ftree-vectorize 
+#KBUILD_CFLAGS += -Wno-undefined-optimized
+KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
+GRAPHITE="-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block"
+CFLAGS="-flto=auto ${GRAPHITE} -ftree-vectorize"
+CXXFLAGS="${CFLAGS}"
+# GCC >= 4.8.2 requires the lto flag
+USE="graphite lto"
+KBUILD_CFLAGS += -fvpt -funroll-loops -fpeel-loops -ftracer
 
 #LDFLAGS	+= -fuse-linker-plugin
 LDFLAGS		+= -O3 
+LDFLAGS_vmlinux	+= $(call ld-option, --gc-sections,)
+#KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
+#KBUILD_CFLAGS	+= $(call cc-option,-fdata-sections,)
 
 # This doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
-#KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
+
 endif
 
 ifeq ($(cc-name),clang)

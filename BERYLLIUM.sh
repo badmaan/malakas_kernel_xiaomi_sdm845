@@ -34,15 +34,21 @@ export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
 export CROSS_COMPILE=$GCC64/aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=$GCC32/arm-linux-gnueabi-
 
-export LD_LIBRARY_PATH=$CLANG/lib64
+export LD_LIBRARY_PATH=/usr/lib64
 
-###start compilation
+###start compilation / setup clang
 mkdir -p out
 make O=out clean
 make O=out ARCH=arm64 malakas_beryllium_defconfig
-
-make -j$(nproc --all) O=out #V=1 
-
+#LD_LIBRARY_PATH=/usr/lib64 \
+#PATH="~/TOOLCHAIN/aarch64-linux-gnu/bin:~/TOOLCHAIN/clang/bin:~/TOOLCHAIN/arm-linux-gnueabi/bin:/TOOLCHAIN/binutils/bin:/usr/bin:${PATH}" \
+make -j$(nproc --all) O=out #V=1 #\  
+        #ARCH=arm64 \
+        #SUBARCH=arm64 \
+        #CC=clang \
+        #CROSS_COMPILE=aarch64-linux-gnu- \
+        #CLANG_TRIPLE=aarch64-linux-gnu-
+        
 ###zip kernel
 mkdir $KERNEL
 mkdir $KERNEL/.compile
