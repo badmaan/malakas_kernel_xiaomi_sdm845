@@ -21,7 +21,6 @@
 
 #include <linux/i2c.h>
 #include <linux/input.h>
-#include <linux/kthread.h>
 
 
 #include <linux/pm_qos.h>
@@ -91,8 +90,6 @@ extern const uint16_t gesture_key_array[];
 
 #define NVT_LOCKDOWN_SIZE	8
 
-
-
 struct nvt_config_info {
 	u8 tp_vendor;
 	u8 tp_color;
@@ -104,7 +101,7 @@ struct nvt_config_info {
 struct nvt_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
-	struct kthread_work nvt_work;
+	struct work_struct nvt_work;
 	struct delayed_work nvt_fwu_work;
 	struct regulator *vddio_reg;
 	struct regulator *lab_reg;
