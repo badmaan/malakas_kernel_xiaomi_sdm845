@@ -303,7 +303,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe 
 HOSTCXXFLAGS = -Ofast
 subdir-ccflags-y := -Ofast
 
@@ -862,30 +862,22 @@ endif
 #THANAS
 ifeq ($(cc-name),gcc)
 # Optimization for gcc sdm845
-KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -funroll-loops -frename-registers -fomit-frame-pointer -fopenmp -D_GLIBCXX_PARALLEL 
-#KBUILD_CFLAGS	+=  -fprofile-generate
-##KBUILD_CFLAGS	+=  -fprofile-use -fprofile-correction 
-KBUILD_CFLAGS	+= -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block 
-KBUILD_CFLAGS	+= -ftree-vectorize 
-#KBUILD_CFLAGS += -Wno-undefined-optimized
-KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
-GRAPHITE="-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block"
-CFLAGS="-flto=auto ${GRAPHITE} -ftree-vectorize"
-CXXFLAGS="${CFLAGS}"
-# GCC >= 4.8.2 requires the lto flag
-USE="graphite lto"
-KBUILD_CFLAGS += -fvpt -funroll-loops -fpeel-loops -ftracer
-
-#LDFLAGS	+= -fuse-linker-plugin
+KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -fvpt -fpeel-loops -ftree-loop-optimize -floop-optimize -ftracer -frename-registers -fomit-frame-pointer -fopenmp -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -ftree-vectorize -fforce-addr -pipe -D_GLIBCXX_PARALLEL
 LDFLAGS		+= -O3 
 LDFLAGS_vmlinux	+= $(call ld-option, --gc-sections,)
-#KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
-#KBUILD_CFLAGS	+= $(call cc-option,-fdata-sections,)
+
+#KBUILD_CFLAGS	+= -fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
+#LDFLAGS	+=  -fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
+#KBUILD_CFLAGS	+=  -fprofile-use=~/TOOLCHAIN/PGO -fprofile-correction 
+
+KBUILD_CFLAGS += -Wno-undefined-optimized
+#LDFLAGS	+= -fuse-linker-plugin
+
 
 # This doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
-
+KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
 endif
 
 ifeq ($(cc-name),clang)
