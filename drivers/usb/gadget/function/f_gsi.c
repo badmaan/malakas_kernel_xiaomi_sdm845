@@ -535,7 +535,6 @@ static int ipa_connect_channels(struct gsi_data_port *d_port)
 {
 	int ret;
 	struct f_gsi *gsi = d_port_to_gsi(d_port);
-	struct f_gsi *gsi_rmnet_v2x = __gsi[USB_PROT_RMNET_V2X_IPA];
 	struct ipa_usb_xdci_chan_params *in_params =
 				&d_port->ipa_in_channel_params;
 	struct ipa_usb_xdci_chan_params *out_params =
