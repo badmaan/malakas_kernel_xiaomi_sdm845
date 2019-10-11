@@ -862,15 +862,18 @@ endif
 #THANAS
 ifeq ($(cc-name),gcc)
 # Optimization for gcc sdm845
-KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -fvpt -fpeel-loops -ftree-loop-optimize -floop-optimize -ftracer -frename-registers -fomit-frame-pointer -fopenmp -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -ftree-vectorize -fforce-addr -pipe -D_GLIBCXX_PARALLEL
+KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -fvpt -fpeel-loops -ftree-loop-optimize -floop-optimize -ftracer -frename-registers -fomit-frame-pointer -fopenmp -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -ftree-vectorize -pipe -D_GLIBCXX_PARALLEL -fno-gcse -fipa-cp -fprefetch-loop-arrays 
+KBUILD_CFLAGS	+= -funroll-loops -fforce-addr
 LDFLAGS		+= -O3 
 LDFLAGS_vmlinux	+= $(call ld-option, --gc-sections,)
+CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS +=
 
 #KBUILD_CFLAGS	+= -fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
 #LDFLAGS	+=  -fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
 #KBUILD_CFLAGS	+=  -fprofile-use=~/TOOLCHAIN/PGO -fprofile-correction 
 
-KBUILD_CFLAGS += -Wno-undefined-optimized
+#KBUILD_CFLAGS += -Wno-undefined-optimized
 #LDFLAGS	+= -fuse-linker-plugin
 
 
@@ -888,14 +891,23 @@ endif
 ifdef CONFIG_POLLY_CLANG
 KBUILD_CFLAGS	+= -fopenmp 
 KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-parallel -lgomp \
+		   -mllvm -polly-omp-backend=LLVM \
+		   -mllvm -polly-scheduling=dynamic \
+		   -mllvm -polly-scheduling-chunksize=1 \
+		   -mllvm -polly-vectorizer=polly \
+		   -mllvm -polly-opt-fusion=max \
+		   -mllvm -polly-opt-maximize-bands=yes \
 		   -mllvm -polly-run-dce \
+		   -mllvm -polly-position=after-loopopt \
 		   -mllvm -polly-run-inliner \
 		   -mllvm -polly-opt-fusion=max \
 		   -mllvm -polly-ast-use-context \
 		   -mllvm -polly-detect-keep-going \
 		   -mllvm -polly-vectorizer=stripmine \
+		   -mllvm -polly-opt-simplify-deps=no \
+		   -mllvm -polly-rtc-max-arrays-per-group=40 \
 		   -mllvm -polly-invariant-load-hoisting
+		   
 # Add EXP New Pass Manager for clang
 KBUILD_CFLAGS	+= -fexperimental-new-pass-manager
 LDFLAGS		+= -O3 
