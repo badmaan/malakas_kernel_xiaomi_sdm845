@@ -15,7 +15,7 @@ MLX=~/GIT/malakas_kernel_xiaomi_sdm845
 AK=$MLX/anykernel
 OUT=$MLX/out/arch/arm64/boot
 KERNEL=~/Desktop/MLX
-TC=/usr/bin
+TC=~/TOOLCHAIN
 
 GCC32=$TC/arm-linux-gnueabi/bin 
 GCC64=$TC/aarch64-linux-gnu/bin
@@ -29,27 +29,32 @@ export KBUILD_BUILD_HOST=MLX
 
 export ARCH=arm64 && export SUBARCH=arm64 malakas_beryllium_defconfig
 
-export CC=$TC/clang
+#export CC=$CLANG/clang
 
+#export CLANG_TRIPLE=$GCC64/aarch64-linux-gnu-
 
-export CROSS_COMPILE=$TC/aarch64-linux-gnu-
-export CROSS_COMPILE_ARM32=$TC/arm-linux-gnueabi-
+export CROSS_COMPILE=$GCC64/aarch64-linux-gnu-
+export CROSS_COMPILE_ARM32=$GCC32/arm-linux-gnueabi-
 
-export LD_LIBRARY_PATH=~/usr/lib
+#export LD=ld.gold
 
-###start compilation
+#export LD_LIBRARY_PATH=/usr/lib64
+#export PATH="~/TOOLCHAIN/aarch64-linux-gnu/bin:~/TOOLCHAIN/clang/bin:${PATH}"
+
+###start compilation / setup clang
 mkdir -p out
 make O=out clean
 make O=out ARCH=arm64 malakas_beryllium_defconfig
-#LD_LIBRARY_PATH=/usr/lib64 \
-PATH="/usr/bin:/usr/bin:${PATH}" \
-make -j4 O=out \
-        ARCH=arm64 \
-        SUBARCH=arm64 \
-        CC=clang \
-        CROSS_COMPILE=aarch64-linux-gnu- \
-        CROSS_COMPILE32=arm-linux-gnueabi- \
-        #LD=ld.gold
+#LD_LIBRARY_PATH=/home/x/TOOLCHAIN/clang/lib/
+#PATH="/home/x/TOOLCHAIN/clang/bin:/home/x/TOOLCHAIN/aarch64-linux-gnu/bin:${PATH}" \
+make -j$(nproc --all) O=out #\  #V=1  
+        #ARCH=arm64 \
+        #SUBARCH=arm64 \
+        #LD=ld.gold \
+        #CC=clang \
+        #HOSTCC=clang \
+        #CROSS_COMPILE=aarch64-linux-gnu- \
+        #CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
 ###zip kernel
 mkdir $KERNEL
@@ -58,17 +63,7 @@ mv $OUT/Image.gz-dtb $AK/Image.gz-dtb
 mv $MLX/out/include/generated/compile.h $KERNEL/.compile/compile.h
 rm -rf $MLX/out
 cd $AK
-zip -r malakas_kernel_q_beryllium_69-65hz_$(date +"%Y-%m-%d").zip *
+zip -r malakas_kernel_q_beryllium_$(date +"%Y-%m-%d").zip *
 rm -rf Image.gz-dtb
-mv malakas_kernel_q_beryllium_69-65hz_$(date +"%Y-%m-%d").zip $KERNEL
+mv malakas_kernel_q_beryllium_$(date +"%Y-%m-%d").zip $KERNEL
 
-###push kernel
-cd $KERNEL
-adb kill-server
-adb tcpip 5555
-adb connect 192.168.3.101:5555
-sleep 2
-adb push malakas_kernel_q_beryllium_69-65hz_$(date +"%Y-%m-%d").zip /sdcard/MLX/malakas_kernel_q_beryllium_69-65hz_-$(date +"%Y-%m-%d").zip
-adb reboot recovery
-date
-cd $MLX
