@@ -513,8 +513,11 @@ endif
 
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
-CLANG_TRIPLE    ?= $(CROSS_COMPILE)
-CLANG_FLAGS	+= --target=$(notdir $(CLANG_TRIPLE:%-=%))
+CLANG_TRIPLE	?= $(CROSS_COMPILE)
+CLANG_FLAGS	:= --target=$(notdir $(CLANG_TRIPLE:%-=%))
+ifeq ($(shell $(srctree)/scripts/clang-android.sh $(CC) $(CLANG_FLAGS)), y)
+$(error "Clang with Android --target detected. Did you specify CLANG_TRIPLE?")
+endif
 GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))
 CLANG_FLAGS	+= --prefix=$(GCC_TOOLCHAIN_DIR)
 GCC_TOOLCHAIN	:= $(realpath $(GCC_TOOLCHAIN_DIR)/..)
@@ -528,7 +531,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, address-of-packed-member)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
-#KBUILD_CFLAGS += -Wno-undefined-optimized
+KBUILD_CFLAGS += -Wno-undefined-optimized
 KBUILD_CFLAGS += -Wno-tautological-constant-out-of-range-compare
 
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
@@ -553,6 +556,7 @@ else
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 endif
+
 
 ifeq ($(mixed-targets),1)
 # ===========================================================================
@@ -719,7 +723,8 @@ endif
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
-CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage -fno-tree-loop-im $(call cc-disable-warning,maybe-uninitialized,)
+CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage -fno-tree-loop-im $(call cc-disable-warning,maybe-uninitialized,) \
+-fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
 CFLAGS_KCOV	:= $(call cc-option,-fsanitize-coverage=trace-pc,)
 export CFLAGS_GCOV CFLAGS_KCOV
 
@@ -862,16 +867,25 @@ endif
 #THANAS
 ifeq ($(cc-name),gcc)
 # Optimization for gcc sdm845
-KBUILD_CFLAGS	+= -Ofast -ffast-math -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55 -Wno-attribute-alias -fno-signed-zeros -fvpt -fpeel-loops -ftree-loop-optimize -floop-optimize -ftracer -frename-registers -fomit-frame-pointer -fopenmp -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -ftree-vectorize -pipe -D_GLIBCXX_PARALLEL -fno-gcse -fipa-cp -fprefetch-loop-arrays 
-KBUILD_CFLAGS	+= -funroll-loops -fforce-addr
-LDFLAGS		+= -O3 
-LDFLAGS_vmlinux	+= $(call ld-option, --gc-sections,)
-CFLAGS += -ffunction-sections -fdata-sections
-LDFLAGS +=
+KBUILD_CFLAGS	+= -Ofast -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55+crc+crypto+fp16+simd+sve \
+-Wno-attribute-alias -fomit-frame-pointer -pipe \
+-funroll-loops \
+-fforce-addr \
 
-#KBUILD_CFLAGS	+= -fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
-#LDFLAGS	+=  -fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
-#KBUILD_CFLAGS	+=  -fprofile-use=~/TOOLCHAIN/PGO -fprofile-correction 
+
+#-floop-nest-optimize -fprefetch-loop-arrays 
+#KBUILD_CFLAGS	+= -fno-gcse  
+#KBUILD_CFLAGS	+= -floop-strip-mine -floop-block
+#KBUILD_CFLAGS	+= -floop-optimize -ftree-vectorize -ftracer
+LDFLAGS		+= -O3 
+LDFLAGS += -fuse-ld=gold
+KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
+KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
+#LDFLAGS_vmlinux	+= $(call ld-option, --gc-sections,)
+#-fforce-addr -fopenmp -D_GLIBCXX_PARALLEL -ffunction-sections -fdata-sections -fvpt 
+#-fprofile-arcs -fauto-profile
+#-fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
+#-fprofile-use=~/TOOLCHAIN/PGO -fprofile-correction 
 
 #KBUILD_CFLAGS += -Wno-undefined-optimized
 #LDFLAGS	+= -fuse-linker-plugin
@@ -889,7 +903,7 @@ KBUILD_CFLAGS	+= -Ofast -march=armv8.3-a+crc+crypto -ffast-math -mcpu=cortex-a55
 endif
 
 ifdef CONFIG_POLLY_CLANG
-KBUILD_CFLAGS	+= -fopenmp 
+#KBUILD_CFLAGS	+= -fopenmp 
 KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-omp-backend=LLVM \
 		   -mllvm -polly-scheduling=dynamic \
@@ -927,7 +941,7 @@ endif
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
 
 # check for 'asm goto'
-ifeq ($(call shell-cached,$(CONFIG_SHELL) $(srctree)/scripts/gcc-goto.sh $(CC) $(KBUILD_CFLAGS)), y)
+ifeq ($(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-goto.sh $(CC) $(KBUILD_CFLAGS)), y)
 	KBUILD_CFLAGS += -DCC_HAVE_ASM_GOTO
 	KBUILD_AFLAGS += -DCC_HAVE_ASM_GOTO
 endif
@@ -1060,7 +1074,7 @@ KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
 endif
 
 # arch Makefile may override CC so keep this after arch Makefile is included
-NOSTDINC_FLAGS += -nostdinc -isystem $(call shell-cached,$(CC) -print-file-name=include)
+NOSTDINC_FLAGS += -nostdinc -isystem $(shell $(CC) -print-file-name=include)
 CHECKFLAGS     += $(NOSTDINC_FLAGS)
 
 # warn about C99 declaration after statement
@@ -1878,7 +1892,6 @@ clean: $(clean-dirs)
 		-o -name '.*.d' -o -name '.*.tmp' -o -name '*.mod.c' \
 		-o -name '*.symtypes' -o -name 'modules.order' \
 		-o -name modules.builtin -o -name '.tmp_*.o.*' \
-		-o -name .cache.mk \
 		-o -name '*.c.[012]*.*' \
 		-o -name '*.ll' \
 		-o -name '*.gcno' \
@@ -2026,7 +2039,7 @@ cmd_crmodverdir = $(Q)mkdir -p $(MODVERDIR) \
 
 # read all saved command lines
 
-cmd_files := $(wildcard .*.cmd $(foreach f,$(sort $(targets)),$(dir $(f)).$(notdir $(f)).cmd))
+targets := $(wildcard $(sort $(targets)))
 cmd_files := $(wildcard .*.cmd $(foreach f,$(targets),$(dir $(f)).$(notdir $(f)).cmd))
 
 ifneq ($(cmd_files),)
@@ -2042,5 +2055,4 @@ FORCE:
 # Declare the contents of the .PHONY variable as phony.  We keep that
 # information in a variable so we can use it in if_changed and friends.
 .PHONY: $(PHONY)
-
 
