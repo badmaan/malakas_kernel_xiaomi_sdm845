@@ -516,9 +516,7 @@ static int ovl_create_or_link(struct dentry *dentry, struct inode *inode,
 							link, hardlink);
 	}
 out_revert_creds:
-	ovl_revert_creds(old_cred ?: hold_cred);
-	if (old_cred && hold_cred)
-		put_cred(hold_cred);
+	ovl_revert_creds(old_cred);
 	if (!err) {
 		struct inode *realinode = d_inode(ovl_dentry_upper(dentry));
 
