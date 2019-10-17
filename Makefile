@@ -531,7 +531,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, address-of-packed-member)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
-
+KBUILD_CFLAGS += -Wno-undefined-optimized
 KBUILD_CFLAGS += -Wno-tautological-constant-out-of-range-compare
 
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
@@ -871,7 +871,6 @@ KBUILD_CFLAGS	+= -Ofast -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55
 -funroll-loops \
 -fforce-addr \
 
-KBUILD_CFLAGS += -Wno-undefined-optimized
 #-floop-nest-optimize -fprefetch-loop-arrays 
 #KBUILD_CFLAGS	+= -fno-gcse  
 #KBUILD_CFLAGS	+= -floop-strip-mine -floop-block
