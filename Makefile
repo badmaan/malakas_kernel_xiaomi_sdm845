@@ -542,13 +542,12 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
 KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
 CLANG_FLAGS	+= -no-integrated-as
-CLANG_FLAGS	+= -Werror=unknown-warning-option
+KBUILD_CFLAGS	+= $(CLANG_FLAGS)
+KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 ifeq ($(ld-name),lld)
 CLANG_FLAGS	+= -fuse-ld=$(shell which $(LD))
 endif
 KBUILD_CPPFLAGS	+= -Qunused-arguments
-KBUILD_CFLAGS	+= $(CLANG_FLAGS)
-KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 else
 
 # These warnings generated too much noise in a regular build.
