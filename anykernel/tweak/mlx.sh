@@ -75,8 +75,8 @@ echo 1 > /dev/stune/foreground/schedtune.prefer_idle
 #echo 0 > /dev/stune/top-app/schedtune.boost
 #echo 0 > /dev/stune/top-app/schedtune.colocate
 echo 1 > /dev/stune/top-app/schedtune.prefer_idle
-#echo 1 > /dev/stune/top-app/schedtune.sched_boost
-#echo 0 > /dev/stune/top-app/schedtune.sched_boost_enabled
+echo 1 > /dev/stune/top-app/schedtune.sched_boost
+echo 1 > /dev/stune/top-app/schedtune.sched_boost_enabled
 #echo 0 > /dev/stune/top-app/schedtune.sched_boost_no_override
 #echo 0 > /dev/stune/top-app/tasks
 
@@ -190,6 +190,8 @@ sysctl -e -w kernel.panic=0
 echo "0" > /sys/kernel/rcu_expedited
 echo "1" > /sys/kernel/rcu_normal
 
+chmod 0664 /sys/class/kgsl/kgsl-3d0/devfreq/max_freq
+echo "710000000" > /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 
 echo "710000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 echo "0" > /sys/class/kgsl/kgsl-3d0/bus_split
 echo "1" > /sys/class/kgsl/kgsl-3d0/force_bus_on
@@ -235,9 +237,17 @@ echo "deep" > /sys/power/mem_sleep
 
 echo "10" > /sys/class/thermal/thermal_message/sconfig
 
-chmod 666 /sys/module/sync/parameters/fsync_enable
-chown root /sys/module/sync/parameters/fsync_enable
-echo "N" > /sys/module/sync/parameters/fsync_enable
+chmod 666 /sys/module/sync/parameters/fsync_enabled
+chown root /sys/module/sync/parameters/fsync_enabled
+echo "N" > /sys/module/sync/parameters/fsync_enabled
+
+echo "0" > /sys/block/mmcblk0/queue/iostats;
+echo "128" > /sys/block/mmcblk0/queue/nr_requests;
+echo "128" > /sys/block/mmcblk0/queue/read_ahead_kb;
+
+echo "0" > /sys/block/sda/queue/iostats;
+echo "128" > /sys/block/sda/queue/nr_requests;
+echo "128" > /sys/block/sda/queue/read_ahead_kb;
 
 ########################
 chmod 0644 /sys/class/misc/boeffla_wakelock_blocker/wakelock_blocker
