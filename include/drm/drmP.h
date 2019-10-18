@@ -907,7 +907,7 @@ struct drm_device {
 	int doze_state;
 	int pre_state;
 	int doze_brightness;
-	int hbm_status;
+	int hbm_mode;
 
 	struct drm_bridge *bridge;
 	struct task_struct *bridge_enable_task;

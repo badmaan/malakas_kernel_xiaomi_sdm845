@@ -4508,19 +4508,19 @@ static int panel_disp_param_send_lock(struct dsi_panel *panel, int param)
 	case 0x10000:
 		pr_info("hbm on\n");
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_ON);
-		drm_dev->hbm_status = 1;
+		drm_dev->hbm_mode = 1;
 		break;
 	case 0x20000:
 		pr_info("hbm fod on\n");
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_FOD_ON);
 		panel->skip_dimmingon = STATE_DIM_BLOCK;
 		panel->fod_hbm_enabled = true;
-		drm_dev->hbm_status = 1;
+		drm_dev->hbm_mode = 1;
 		break;
 	case 0x30000:
 		pr_info("hbm fod to normal mode\n");
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_FOD2NORM);
-		drm_dev->hbm_status = 1;
+		drm_dev->hbm_mode = 1;
 		break;
 	case 0xE0000:
 		pr_info("hbm fod off\n");
@@ -4528,12 +4528,12 @@ static int panel_disp_param_send_lock(struct dsi_panel *panel, int param)
 		panel->skip_dimmingon = STATE_DIM_RESTORE;
 		panel->fod_hbm_enabled = false;
 		panel->fod_hbm_off_time = ktime_add_ms(ktime_get(), 170);
-		drm_dev->hbm_status = 0;
+		drm_dev->hbm_mode = 0;
 		break;
 	case 0xF0000:
 		pr_info("hbm off\n");
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_OFF);
-		drm_dev->hbm_status = 0;
+		drm_dev->hbm_mode = 0;
 		break;
 	case DISPLAY_OFF_MODE:
 		pr_info("display off mode\n");
