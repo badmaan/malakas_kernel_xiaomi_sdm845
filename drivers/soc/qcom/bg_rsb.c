@@ -935,17 +935,6 @@ static int store_enable(struct device *pdev, struct device_attribute *attr,
 		return -ENOMEDIUM;
 	}
 
-	if (dev->blk_rsb_cmnds) {
-		pr_err("Device is in TWM state\n");
-		kfree(arr);
-		return count;
-	}
-
-	if (!dev->is_cnfgrd) {
-		kfree(arr);
-		return -ENOMEDIUM;
-	}
-
 	rc = split_bg_work(dev, arr);
 	if (rc != 0)
 		pr_err("Not able to process request\n");
