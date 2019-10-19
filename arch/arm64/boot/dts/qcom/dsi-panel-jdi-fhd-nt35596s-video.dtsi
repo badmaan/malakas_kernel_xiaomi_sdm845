@@ -74,7 +74,7 @@
 
 		qcom,mdss-dsi-display-timings {
 			timing@0{
-				qcom,mdss-dsi-panel-framerate = <65>;
+				qcom,mdss-dsi-panel-framerate = <60>;
 				qcom,mdss-dsi-panel-width = <1080>;
 				qcom,mdss-dsi-panel-height = <2160>;
 				qcom,mdss-dsi-h-front-porch = <16>;
@@ -88,7 +88,7 @@
 				qcom,mdss-dsi-h-right-border = <0>;
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
-
+				qcom,mdss-dsi-panel-jitter = <0x8>;
 				qcom,mdss-dsi-on-command = [
 						15 01 00 00 00 00 02 FF 24
 						15 00 00 00 00 00 02 9D 34
