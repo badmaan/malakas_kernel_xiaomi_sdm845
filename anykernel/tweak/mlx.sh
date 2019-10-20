@@ -241,13 +241,53 @@ chmod 666 /sys/module/sync/parameters/fsync_enabled
 chown root /sys/module/sync/parameters/fsync_enabled
 echo "N" > /sys/module/sync/parameters/fsync_enabled
 
-echo "0" > /sys/block/mmcblk0/queue/iostats;
-echo "128" > /sys/block/mmcblk0/queue/nr_requests;
-echo "128" > /sys/block/mmcblk0/queue/read_ahead_kb;
+echo "0" > /sys/block/mmcblk0/queue/add_random
+echo "0" > /sys/block/mmcblk0/queue/iostats
+echo "cfq" > /sys/block/mmcblk0/queue/scheduler
+echo "0" > /sys/block/mmcblk0/queue/io_poll
+echo "0" > /sys/block/mmcblk0/queue/nomerges
+echo "128" > /sys/block/mmcblk0/queue/nr_requests
+echo "128" > /sys/block/mmcblk0/queue/read_ahead_kb
+echo "0" > /sys/block/mmcblk0/queue/rotational
+echo "1" > /sys/block/mmcblk0/queue/rq_affinity
+echo "write through" > /sys/block/mmcblk0/queue/write_cache
 
-echo "0" > /sys/block/sda/queue/iostats;
-echo "128" > /sys/block/sda/queue/nr_requests;
-echo "128" > /sys/block/sda/queue/read_ahead_kb;
+echo 4 > /sys/block/mmcblk0/queue/iosched/quantum
+echo 80 > /sys/block/mmcblk0/queue/iosched/fifo_expire_sync
+echo 330 > /sys/block/mmcblk0/queue/iosched/fifo_expire_async
+echo 12582912 > /sys/block/mmcblk0/queue/iosched/back_seek_max
+echo 1 > /sys/block/mmcblk0/queue/iosched/back_seek_penalty
+echo 60 > /sys/block/mmcblk0/queue/iosched/slice_sync
+echo 50 > /sys/block/mmcblk0/queue/iosched/slice_async
+echo 2 > /sys/block/mmcblk0/queue/iosched/slice_async_rq
+echo 0 > /sys/block/mmcblk0/queue/iosched/slice_idle
+echo 0 > /sys/block/mmcblk0/queue/iosched/group_idle
+echo 1 > /sys/block/mmcblk0/queue/iosched/low_latency
+echo 300 > /sys/block/mmcblk0/queue/iosched/target_latency
+
+echo "0" > /sys/block/sda/queue/add_random
+echo "0" > /sys/block/sda/queue/iostats
+echo "cfq" > /sys/block/sda/queue/scheduler
+echo "0" > /sys/block/sda/queue/io_poll
+echo "0" > /sys/block/sda/queue/nomerges
+echo "128" > /sys/block/sda/queue/nr_requests
+echo "128" > /sys/block/sda/queue/read_ahead_kb
+echo "0" > /sys/block/sda/queue/rotational
+echo "1" > /sys/block/sda/queue/rq_affinity
+echo "write through" > /sys/block/sda/queue/write_cache
+
+echo 4 > /sys/block/sda/queue/iosched/quantum
+echo 80 > /sys/block/sda/queue/iosched/fifo_expire_sync
+echo 330 > /sys/block/sda/queue/iosched/fifo_expire_async
+echo 12582912 > /sys/block/sda/queue/iosched/back_seek_max
+echo 1 > /sys/block/sda/queue/iosched/back_seek_penalty
+echo 60 > /sys/block/sda/queue/iosched/slice_sync
+echo 50 > /sys/block/sda/queue/iosched/slice_async
+echo 2 > /sys/block/sda/queue/iosched/slice_async_rq
+echo 0 > /sys/block/sda/queue/iosched/slice_idle
+echo 0 > /sys/block/sda/queue/iosched/group_idle
+echo 1 > /sys/block/sda/queue/iosched/low_latency
+echo 300 > /sys/block/sda/queue/iosched/target_latency
 
 ########################
 chmod 0644 /sys/class/misc/boeffla_wakelock_blocker/wakelock_blocker
