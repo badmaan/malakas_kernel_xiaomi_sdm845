@@ -4493,6 +4493,7 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 		qcfs_rq->h_nr_running -= task_delta;
 		walt_dec_throttled_cfs_rq_stats(&qcfs_rq->walt_stats, cfs_rq);
 
+
 		if (qcfs_rq->load.weight)
 			dequeue = 0;
 	}

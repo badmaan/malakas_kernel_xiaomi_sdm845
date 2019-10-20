@@ -123,19 +123,6 @@ void handle_lmk_event(struct task_struct *selected, int selected_tasksize,
 	int tail;
 	struct lmk_event *events;
 	struct lmk_event *event;
-	int res;
-	char taskname[MAX_TASKNAME];
-
-	res = get_cmdline(selected, taskname, MAX_TASKNAME - 1);
-
-	/* No valid process name means this is definitely not associated with a
-	 * userspace activity.
-	 */
-
-	if (res <= 0 || res >= MAX_TASKNAME)
-		return;
-
-	taskname[res] = '\0';
 
 	spin_lock(&lmk_event_lock);
 
@@ -151,7 +138,7 @@ void handle_lmk_event(struct task_struct *selected, int selected_tasksize,
 	events = (struct lmk_event *) event_buffer.buf;
 	event = &events[head];
 
-	memcpy(event->taskname, taskname, res + 1);
+	strncpy(event->taskname, selected->comm, MAX_TASKNAME);
 
 	event->pid = selected->pid;
 	event->uid = from_kuid_munged(current_user_ns(), task_uid(selected));
@@ -778,21 +765,12 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 		lowmem_deathpending_timeout = jiffies + HZ;
 		rem += selected_tasksize;
-		rcu_read_unlock();
 		get_task_struct(selected);
-		/* give the system time to free up the memory */
-		msleep_interruptible(20);
-		trace_almk_shrink(selected_tasksize, ret,
-				  other_free, other_file,
-				  selected_oom_score_adj);
-	} else {
-		trace_almk_shrink(1, ret, other_free, other_file, 0);
-		rcu_read_unlock();
 	}
 
 	lowmem_print(4, "lowmem_scan %lu, %x, return %lu\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
-	mutex_unlock(&scan_mutex);
+	rcu_read_unlock();
 
 	if (selected) {
 		handle_lmk_event(selected, selected_tasksize, min_score_adj);
@@ -811,7 +789,6 @@ static struct shrinker lowmem_shrinker = {
 static int __init lowmem_init(void)
 {
 	register_shrinker(&lowmem_shrinker);
-	vmpressure_notifier_register(&lmk_vmpr_nb);
 	lmk_event_init();
 	return 0;
 }
