@@ -2112,26 +2112,25 @@ void inode_nohighmem(struct inode *inode)
 }
 EXPORT_SYMBOL(inode_nohighmem);
 
-/*
- * Generic function to check FS_IOC_SETFLAGS values and reject any invalid
- * configurations.
+/**
+ * current_time - Return FS time
+ * @inode: inode.
  *
- * Note: the caller should be holding i_mutex, or else be sure that they have
- * exclusive access to the inode structure.
+ * Return the current time truncated to the time granularity supported by
+ * the fs.
+ *
+ * Note that inode and inode->sb cannot be NULL.
+ * Otherwise, the function warns and returns time without truncation.
  */
-int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
-			     unsigned int flags)
+struct timespec current_time(struct inode *inode)
 {
-	/*
-	 * The IMMUTABLE and APPEND_ONLY flags can only be changed by
-	 * the relevant capability.
-	 *
-	 * This test looks nicer. Thanks to Pauline Middelink
-	 */
-	if ((flags ^ oldflags) & (FS_APPEND_FL | FS_IMMUTABLE_FL) &&
-	    !capable(CAP_LINUX_IMMUTABLE))
-		return -EPERM;
+	struct timespec now = current_kernel_time();
 
-	return 0;
+	if (unlikely(!inode->i_sb)) {
+		WARN(1, "current_time() called with uninitialized super_block in the inode");
+		return now;
+	}
+
+	return timespec_trunc(now, inode->i_sb->s_time_gran);
 }
-EXPORT_SYMBOL(vfs_ioc_setflags_prepare);
+EXPORT_SYMBOL(current_time);
