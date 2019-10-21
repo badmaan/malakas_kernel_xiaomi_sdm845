@@ -239,7 +239,7 @@ echo "10" > /sys/class/thermal/thermal_message/sconfig
 
 chmod 666 /sys/module/sync/parameters/fsync_enabled
 chown root /sys/module/sync/parameters/fsync_enabled
-echo "N" > /sys/module/sync/parameters/fsync_enabled
+echo "Y" > /sys/module/sync/parameters/fsync_enabled
 
 echo "0" > /sys/block/mmcblk0/queue/add_random
 echo "0" > /sys/block/mmcblk0/queue/iostats
