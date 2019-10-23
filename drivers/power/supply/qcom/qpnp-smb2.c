@@ -2000,7 +2000,6 @@ static int smb2_init_hw(struct smb2 *chip)
 			true, 0);
 	vote(chg->pd_disallowed_votable_indirect, PD_NOT_SUPPORTED_VOTER,
 			chip->dt.no_pd, 0);
-
 	/* Operate the QC2.0 in 5V/9V mode i.e. Disable 12V */
 	rc = smblib_masked_write(chg, HVDCP_PULSE_COUNT_MAX_REG,
 				 PULSE_COUNT_QC2P0_12V | PULSE_COUNT_QC2P0_9V,
@@ -2029,6 +2028,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 */
+
 
 	/*
 	 * AICL configuration:

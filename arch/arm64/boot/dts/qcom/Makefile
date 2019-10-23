@@ -243,7 +243,9 @@ dtb-$(CONFIG_ARCH_SDM845) += sdm845-sim.dtb \
 	sdm845-4k-panel-cdp.dtb \
 	sdm845-4k-panel-qrd.dtb \
 	sdm845-interposer-sdm670-mtp.dtb \
-	sdm845-interposer-sdm670-cdp.dtb
+	sdm845-interposer-sdm670-cdp.dtb \
+	sdm845-v2.1-rb3.dtb \
+	sdm845-v2.1-mtp.dtb
 endif
 endif
 
@@ -504,7 +506,8 @@ dtbo-$(CONFIG_ARCH_SDM450) += msm8953-mtp-overlay.dtbo \
 	msm8953-iot-mtp-overlay.dtbo \
 	sdm450-cdp-s2-overlay.dtbo \
 	sdm450-mtp-s3-overlay.dtbo \
-	sdm450-qrd-sku4-overlay.dtbo
+	sdm450-qrd-sku4-overlay.dtbo\
+	sdm450-no-pmi-mtp-overlay.dtbo
 
 dtbo-$(CONFIG_ARCH_SDM632) += sdm632-rumi-overlay.dtbo \
 	sdm450-cdp-s2-overlay.dtbo \
@@ -611,6 +614,8 @@ sdm450-mtp-s3-overlay.dtbo-base := sdm450-pmi632.dtb \
 sdm450-qrd-sku4-overlay.dtbo-base := sdm450-pmi632.dtb \
 	sdm632.dtb \
 	sdm632-pm8004.dtb
+
+sdm450-no-pmi-mtp-overlay.dtbo-base := sdm450-no-pmi.dtb
 
 sdm632-rumi-overlay.dtbo-base := sdm632.dtb
 sdm632-ext-codec-cdp-s3-overlay.dtbo-base := sdm632.dtb \
@@ -740,7 +745,7 @@ dtb-$(CONFIG_ARCH_SDM450) += sdm450-rcm.dtb \
 	sdm450-pmi632-mtp-s3.dtb \
 	sda450-pmi632-cdp-s2.dtb \
 	sda450-pmi632-mtp-s3.dtb \
-        sdm450-no-pmi-mtp.dtb
+	sdm450-no-pmi-mtp.dtb
 
 dtb-$(CONFIG_ARCH_SDM632) += sdm632-rumi.dtb \
 	sdm632-cdp-s2.dtb \
@@ -776,7 +781,8 @@ dtb-$(CONFIG_ARCH_SDM429) += sdm429-mtp.dtb \
 	sda429-cdp.dtb \
 	sdm429-spyro.dtb \
 	sdm429-spyro-dvt.dtb \
-	sdm429-spyro-wdp.dtb
+	sdm429-spyro-wdp.dtb \
+	sdw3300-bg-1gb-wtp.dtb
 
 endif
 
