@@ -781,8 +781,7 @@ dtb-$(CONFIG_ARCH_SDM429) += sdm429-mtp.dtb \
 	sda429-cdp.dtb \
 	sdm429-spyro.dtb \
 	sdm429-spyro-dvt.dtb \
-	sdm429-spyro-wdp.dtb \
-	sdw3300-bg-1gb-wtp.dtb
+	sdm429-spyro-wdp.dtb
 
 endif
 
