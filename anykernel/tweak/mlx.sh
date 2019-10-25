@@ -81,7 +81,7 @@ echo 1 > /dev/stune/top-app/schedtune.sched_boost_enabled
 #echo 0 > /dev/stune/top-app/tasks
 
 #echo 0 > /proc/sys/kernel/sched_boost
-echo 1 > /proc/sys/kernel/sched_child_runs_first 
+#echo 1 > /proc/sys/kernel/sched_child_runs_first 
 echo 1 > /proc/sys/kernel/sched_tunable_scaling
 #echo 1000000 > /proc/sys/kernel/sched_min_granularity_ns
 #echo 20000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
@@ -163,8 +163,6 @@ echo "300000" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq
 #echo "Y" > /sys/module/lpm_levels/L3/cpu6/pc/idle_enabled
 #echo "Y" > /sys/module/lpm_levels/L3/cpu7/pc/idle_enabled
 
-#echo "1" > /sys/devices/system/cpu/cpuidle/use_deepest_state
-
 echo "Y" > /sys/module/lpm_levels/parameters/cluster_use_deepest_state
 
 write /sys/module/lpm_levels/parameters/sleep_disabled "N" 2>/dev/null
@@ -174,7 +172,7 @@ echo "N" > /sys/module/lpm_levels/parameters/sleep_disabled
 ######################## 
 #echo "25000" > /sys/power/pm_freeze_timeout
 echo "CACHE_HOT_BUDDY" > /sys/kernel/debug/sched_features
-echo "ENERGY_AWARE" > /sys/kernel/debug/sched_features
+#echo "ENERGY_AWARE" > /sys/kernel/debug/sched_features
 echo "FBT_STRICT_ORDER" > /sys/kernel/debug/sched_features
 echo "LAST_BUDDY" > /sys/kernel/debug/sched_features
 echo "NEXT_BUDDY" > /sys/kernel/debug/sched_features
@@ -367,32 +365,6 @@ echo "0" > /proc/sys/net/ipv6/calipso_cache_bucket_size
 echo "0" > /proc/sys/net/ipv6/calipso_cache_enable
 echo "48" > /proc/sys/net/ipv6/ip6frag_time
 
-
-#if [ ${snapdragon} -eq 1 ];then
-#	set_param_HMP sched_spill_load 90
-#	set_param_HMP sched_init_task_load 40
-#	set_param_HMP sched_freq_inc_notify 3000000
-#	set_param_HMP sched_ravg_hist_size 5
-#	set_param_HMP sched_boost 0
-#	fi;
-#if [ -f "/sys/module/msm_thermal/core_control/enabled" ]; then
-#    write /sys/module/msm_thermal/core_control/enabled "1"
-#    write /sys/kernel/intelli_plug/intelli_plug_active "0"
-#    write /sys/module/blu_plug/parameters/enabled "0"
-#    write /sys/devices/virtual/misc/mako_hotplug_control/enabled "0"
-#    write /sys/module/autosmp/parameters/enabled "0"
-#    write /sys/kernel/zen_decision/enabled "0"
-#	elif [ -f "/sys/module/msm_thermal/parameters/enabled" ]; then
-#    write /sys/module/msm_thermal/parameters/enabled "Y"
-#	elif [ -f "/sys/power/cpuhotplug/enabled" ]; then
-#	set_value 1 /sys/power/cpuhotplug/enabled
-#	elif [ -f "/sys/devices/system/cpu/cpuhotplug/enabled" ]; then
-#	set_value 1 /sys/devices/system/cpu/cpuhotplug/enabled
-#	fi;
-if [ -e "/sys/kernel/fast_charge/force_fast_charge" ];  then
-chmod 0644 /sys/kernel/fast_charge/force_fast_charge
-echo "1" > /sys/kernel/fast_charge/force_fast_charge
-fi;
 if [ -e "/sys/module/lpm_levels/parameters/sleep_disabled" ]; then
 chmod 0644 /sys/module/lpm_levels/parameters/sleep_disabled
 echo "0" > /sys/module/lpm_levels/parameters/sleep_disabled
@@ -400,10 +372,6 @@ fi;
 if [ -e "/sys/class/lcd/panel/power_reduce" ]; then
 chmod 0644 /sys/class/lcd/panel/power_reduce
 echo "1" > /sys/class/lcd/panel/power_reduce
-fi;
-if [ -e "/sys/module/workqueue/parameters/power_efficient" ]; then
-chmod 0644 /sys/module/workqueue/parameters/power_efficient
-echo "N" > /sys/module/workqueue/parameters/power_efficient
 fi;
 if [ -e "/sys/module/pm2/parameters/idle_sleep_mode" ]; then
 chmod 0644 /sys/module/pm2/parameters/idle_sleep_mode

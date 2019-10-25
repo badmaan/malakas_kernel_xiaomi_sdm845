@@ -128,6 +128,7 @@ dipper.sh
 polaris.sh
 zeggi.sh
 out/
+testing.log
 
 arch/arm64/configs/malakas_beryllium_defconfig
 arch/arm64/configs/malakas_dipper_defconfig

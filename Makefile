@@ -680,11 +680,11 @@ endif
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
-CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage \
+#CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage \
 	$(call cc-option,-fno-tree-loop-im) \
 	$(call cc-disable-warning,maybe-uninitialized,)
-CFLAGS_KCOV	:= $(call cc-option,-fsanitize-coverage=trace-pc,)
-export CFLAGS_GCOV CFLAGS_KCOV
+#CFLAGS_KCOV	:= $(call cc-option,-fsanitize-coverage=trace-pc,)
+#export CFLAGS_GCOV CFLAGS_KCOV
 
 # Make toolchain changes before including arch/$(SRCARCH)/Makefile to ensure
 # ar/cc/ld-* macros return correct values.
@@ -721,14 +721,6 @@ export LLVM_AR LLVM_DIS
 # Set O3 optimization level for LTO
 LDFLAGS		+= --plugin-opt=O3
 endif
-
-KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
-KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
-#CFLAGS_GCOV	:= #-fprofile-generate -fprofile-dir=~/TOOLCHAIN/PGO
-#CFLAGS_KCOV	:= $(call cc-option,-fsanitize-coverage=trace-pc,)
-#export CFLAGS_GCOV CFLAGS_KCOV
-
-
 
 # The arch Makefile can set ARCH_{CPP,A,C}FLAGS to override the default
 # values of the respective KBUILD_* variables
@@ -899,7 +891,11 @@ endif
 
 ifeq ($(cc-name),clang)
 # Add Some optimization flags for clang
-KBUILD_CFLAGS	+= -Ofast -march=armv8.3-a+crc+crypto -ffast-math -mcpu=cortex-a55 -mtune=cortex-a55
+KBUILD_CFLAGS	+= -Ofast -march=armv8.3-a+crc+crypto+fp16+simd+sve -ffast-math -mcpu=cortex-a55+crc+crypto+fp16+simd+sve -mtune=cortex-a55 \
+-fomit-frame-pointer -pipe \
+-funroll-loops \
+-fforce-addr \
+
 endif
 
 ifdef CONFIG_POLLY_CLANG

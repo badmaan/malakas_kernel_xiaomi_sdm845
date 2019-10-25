@@ -1,5 +1,10 @@
 #!/bin/bash
 rm -rf out
-make mrproper
 make O=out clean
+make mrproper
+clear
+green='\033[01;32m'
+restore='\033[0m'
+echo -e "${green}"
 echo "Μαλάκα!"
+echo -e "${restore}"
