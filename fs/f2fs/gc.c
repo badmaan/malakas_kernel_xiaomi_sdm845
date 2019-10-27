@@ -183,9 +183,6 @@ int f2fs_start_gc_thread(struct f2fs_sb_info *sbi)
 	if (sbi->gc_thread != NULL)
 		goto out;
 
-	if (sbi->gc_thread != NULL)
-		goto out;
-
 	gc_th = f2fs_kmalloc(sbi, sizeof(struct f2fs_gc_kthread), GFP_KERNEL);
 	if (!gc_th) {
 		err = -ENOMEM;
