@@ -76,7 +76,7 @@ mkdir -p $KERNEL/.compile/
 mv $OUT/Image.gz-dtb $AK/Image.gz-dtb
 cp $MLX/out/include/generated/compile.h $KERNEL/.compile/compile.h
 cd $AK
-zip -r $KERNELNAME *
+zip -r $KERNELNAME * -x .git .gitignore README.md *placeholder
 rm -rf Image.gz-dtb
 mv $KERNELNAME $KERNEL
 
