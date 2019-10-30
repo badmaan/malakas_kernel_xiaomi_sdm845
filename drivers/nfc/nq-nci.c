@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -152,7 +153,7 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int is_data_available_for_read(struct nqx_dev *nqx_dev)
+static int __maybe_unused is_data_available_for_read(struct nqx_dev *nqx_dev)
 {
 	int ret;
 
@@ -549,6 +550,32 @@ int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
 		usleep_range(10000, 10100);
 		gpio_set_value(nqx_dev->en_gpio, 1);
 		usleep_range(10000, 10100);
+	} else if (arg == 4) {
+		/*
+		 * Setting firmware download gpio to HIGH for SN100U
+		 * before FW download start
+		 */
+		dev_dbg(&nqx_dev->client->dev, "SN100 fw gpio HIGH\n");
+		if (gpio_is_valid(nqx_dev->firm_gpio)) {
+			gpio_set_value(nqx_dev->firm_gpio, 1);
+			usleep_range(10000, 10100);
+		} else {
+			dev_err(&nqx_dev->client->dev,
+				"firm_gpio is invalid\n");
+		}
+	} else if (arg == 6) {
+		/*
+		 * Setting firmware download gpio to LOW for SN100U
+		 * FW download finished
+		 */
+		dev_dbg(&nqx_dev->client->dev, "SN100 fw gpio LOW\n");
+		if (gpio_is_valid(nqx_dev->firm_gpio)) {
+			gpio_set_value(nqx_dev->firm_gpio, 0);
+			usleep_range(10000, 10100);
+		} else {
+			dev_err(&nqx_dev->client->dev,
+				"firm_gpio is invalid\n");
+		}
 	} else {
 		r = -ENOIOCTLCMD;
 	}
