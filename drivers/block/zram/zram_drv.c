@@ -42,12 +42,6 @@ static DEFINE_MUTEX(zram_index_mutex);
 static int zram_major;
 static const char *default_compressor = CONFIG_ZRAM_DEFAULT_COMP_ALGORITHM;
 
-/*
- * We don't need to see memory allocation errors more than once every 1
- * second to know that a problem is occurring.
- */
-#define ALLOC_ERROR_LOG_RATE_MS 1000
-
 /* Module params (documentation at end) */
 static unsigned int num_devices = 1;
 /*
@@ -304,8 +298,18 @@ static ssize_t idle_store(struct device *dev,
 	struct zram *zram = dev_to_zram(dev);
 	unsigned long nr_pages = zram->disksize >> PAGE_SHIFT;
 	int index;
+	char mode_buf[8];
+	ssize_t sz;
 
-	if (!sysfs_streq(buf, "all"))
+	sz = strscpy(mode_buf, buf, sizeof(mode_buf));
+	if (sz <= 0)
+		return -EINVAL;
+
+	/* ignore trailing new line */
+	if (mode_buf[sz - 1] == '\n')
+		mode_buf[sz - 1] = 0x00;
+
+	if (strcmp(mode_buf, "all"))
 		return -EINVAL;
 
 	down_read(&zram->init_lock);
@@ -632,15 +636,25 @@ static ssize_t writeback_store(struct device *dev,
 	unsigned long index;
 	struct bio bio;
 	struct page *page;
-	ssize_t ret;
-	int mode;
+	ssize_t ret, sz;
+	char mode_buf[8];
+	int mode = -1;
 	unsigned long blk_idx = 0;
 
-	if (sysfs_streq(buf, "idle"))
+	sz = strscpy(mode_buf, buf, sizeof(mode_buf));
+	if (sz <= 0)
+		return -EINVAL;
+
+	/* ignore trailing newline */
+	if (mode_buf[sz - 1] == '\n')
+		mode_buf[sz - 1] = 0x00;
+
+	if (!strcmp(mode_buf, "idle"))
 		mode = IDLE_WRITEBACK;
-	else if (sysfs_streq(buf, "huge"))
+	else if (!strcmp(mode_buf, "huge"))
 		mode = HUGE_WRITEBACK;
-	else
+
+	if (mode == -1)
 		return -EINVAL;
 
 	down_read(&zram->init_lock);
@@ -1376,13 +1390,14 @@ compress_again:
 				__GFP_KSWAPD_RECLAIM |
 				__GFP_NOWARN |
 				__GFP_HIGHMEM |
-				__GFP_MOVABLE);
+				__GFP_MOVABLE |
+				__GFP_CMA);
 	if (!handle) {
 		zcomp_stream_put(zram->comp);
 		atomic64_inc(&zram->stats.writestall);
 		handle = zs_malloc(zram->mem_pool, comp_len,
 				GFP_NOIO | __GFP_HIGHMEM |
-				__GFP_MOVABLE);
+				__GFP_MOVABLE | __GFP_CMA);
 		if (handle)
 			goto compress_again;
 		return -ENOMEM;
