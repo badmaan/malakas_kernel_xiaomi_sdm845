@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 - 2017 Novatek, Inc.
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * $Revision: 20544 $
  * $Date: 2017-12-20 11:08:15 +0800 (週三, 20 十二月 2017) $
@@ -80,6 +80,8 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 #define INPUT_EVENT_PALM_ON		13
 #define INPUT_EVENT_END				13
 
+#define PROC_SYMLINK_PATH "touchpanel"
+
 #if TOUCH_KEY_NUM > 0
 const uint16_t touch_key_array[TOUCH_KEY_NUM] = {
 	KEY_BACK,
@@ -135,7 +137,8 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, 
 
 	while (retries < 5) {
 		ret = i2c_transfer(client->adapter, msgs, 2);
-		if (ret == 2)	break;
+		if (ret == 2)
+			break;
 		retries++;
 		msleep(20);
 		NVT_ERR("error, retry=%d\n", retries);
@@ -173,7 +176,8 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 	msg.buf   = ts->xbuf;
 	while (retries < 5) {
 		ret = i2c_transfer(client->adapter, &msg, 1);
-		if (ret == 1)	break;
+		if (ret == 1)
+			break;
 		retries++;
 		msleep(20);
 		NVT_ERR("error, retry=%d\n", retries);
@@ -560,7 +564,8 @@ static int32_t nvt_flash_close(struct inode *inode, struct file *file)
 {
 	struct nvt_flash_data *dev = file->private_data;
 
-	kfree(dev);
+	if (dev)
+		kfree(dev);
 
 	return 0;
 }
@@ -641,7 +646,7 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 
 	NVT_LOG("gesture_id = %d\n", gesture_id);
 
-	switch (gesture_id) {
+		switch (gesture_id) {
 		case GESTURE_WORD_C:
 			NVT_LOG("Gesture : Word-C.\n");
 			keycode = gesture_key_array[0];
@@ -696,7 +701,7 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 			break;
 		default:
 			break;
-	}
+		}
 
 	if (keycode > 0) {
 		input_report_key(ts->input_dev, keycode, 1);
@@ -1002,14 +1007,11 @@ static void nvt_switch_mode_work(struct work_struct *work)
 	struct nvt_mode_switch *ms = container_of(work, struct nvt_mode_switch, switch_mode_work);
 	struct nvt_ts_data *data = ms->nvt_data;
 	unsigned char value = ms->mode;
-	char ch[64] = {0x0,};
 
-	if (value >= INPUT_EVENT_WAKUP_MODE_OFF && value <= INPUT_EVENT_WAKUP_MODE_ON) {
+	if (value >= INPUT_EVENT_WAKUP_MODE_OFF && value <= INPUT_EVENT_WAKUP_MODE_ON)
 		data->gesture_enabled = value - INPUT_EVENT_WAKUP_MODE_OFF;
-		snprintf(ch, sizeof(ch), "%s", data->gesture_enabled ? "enabled" : "disabled");
-	} else {
+	else
 		NVT_ERR("Does not support touch mode %d\n", value);
-	}
 
 	if (ms != NULL) {
 		kfree(ms);
@@ -1054,7 +1056,7 @@ Description:
 return:
 	n.a.
 *******************************************************/
-static void nvt_ts_work_func(struct work_struct *work)
+static void nvt_ts_work_func(void)
 {
 	int32_t ret = -1;
 	uint8_t point_data[POINT_DATA_LEN + 1] = {0};
@@ -1166,13 +1168,13 @@ static void nvt_ts_work_func(struct work_struct *work)
 
 #if TOUCH_KEY_NUM > 0
 	if (point_data[61] == 0xF8) {
-		for (i = 0; i < ts->max_button_num; i++) {
-			input_report_key(ts->input_dev, touch_key_array[i], ((point_data[62] >> i) & 0x01));
-		}
+		for (i = 0; i < ts->max_button_num; i++)
+			input_report_key(
+				ts->input_dev, touch_key_array[i],
+				((point_data[62] >> i) & 0x01));
 	} else {
-		for (i = 0; i < ts->max_button_num; i++) {
+		for (i = 0; i < ts->max_button_num; i++)
 			input_report_key(ts->input_dev, touch_key_array[i], 0);
-		}
 	}
 #endif
 
@@ -1199,7 +1201,7 @@ static irqreturn_t nvt_ts_irq_handler(int32_t irq, void *dev_id)
 	}
 
 	pm_qos_update_request(&ts->pm_qos_req, 100);
-	queue_work(nvt_wq, &ts->nvt_work);
+	nvt_ts_work_func();
 	pm_qos_update_request(&ts->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 
 	return IRQ_HANDLED;
@@ -1510,38 +1512,14 @@ static ssize_t nvt_panel_display_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[1]);
 }
 
-static ssize_t nvt_panel_wake_gesture_show(struct device *dev,
-				     struct device_attribute *attr, char *buf)
-{
-        const char c = ts->gesture_enabled ? '1' : '0';
-        return sprintf(buf, "%c\n", c);
-}
-
-static ssize_t nvt_panel_wake_gesture_store(struct device *dev,
-				     struct device_attribute *attr, const char *buf, size_t count)
-{
-	int i;
-
-	if (sscanf(buf, "%u", &i) == 1 && i < 2) {
-		ts->gesture_enabled = i;
-		return count;
-	} else {
-		dev_dbg(dev, "enable_dt2w write error\n");
-		return -EINVAL;
-	}
-}
-
 static DEVICE_ATTR(panel_vendor, (0444), nvt_panel_vendor_show, NULL);
 static DEVICE_ATTR(panel_color, (0444), nvt_panel_color_show, NULL);
 static DEVICE_ATTR(panel_display, (0444), nvt_panel_display_show, NULL);
-static DEVICE_ATTR(wake_gesture, S_IWUSR | S_IRUSR,
-		nvt_panel_wake_gesture_show, nvt_panel_wake_gesture_store);
 
 static struct attribute *nvt_attr_group[] = {
 	&dev_attr_panel_vendor.attr,
 	&dev_attr_panel_color.attr,
 	&dev_attr_panel_display.attr,
-	&dev_attr_wake_gesture.attr,
 	NULL,
 };
 
@@ -1568,6 +1546,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	}
 
 	ts->client = client;
+	ts->input_proc = NULL;
 	i2c_set_clientdata(client, ts);
 
 	/*---parse dts---*/
@@ -1621,13 +1600,15 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	mutex_unlock(&ts->lock);
 
 	/*---create workqueue---*/
-	nvt_wq = create_workqueue("nvt_wq");
+	nvt_wq = alloc_workqueue("nvt_wq",
+						WQ_HIGHPRI | WQ_UNBOUND | WQ_FREEZABLE |
+						WQ_MEM_RECLAIM, 0);
 	if (!nvt_wq) {
 		NVT_ERR("nvt_wq create workqueue failed\n");
 		ret = -ENOMEM;
 		goto err_create_nvt_wq_failed;
 	}
-	INIT_WORK(&ts->nvt_work, nvt_ts_work_func);
+
 	/*---allocate input device---*/
 	ts->input_dev = input_allocate_device();
 	if (ts->input_dev == NULL) {
@@ -1911,16 +1892,10 @@ static int32_t nvt_ts_suspend(struct device *dev)
 		/*---write i2c command to enter "wakeup gesture mode"---*/
 		buf[0] = EVENT_MAP_HOST_CMD;
 		buf[1] = 0x13;
-#if 0 /* Do not set 0xFF first, ToDo */
-		buf[2] = 0xFF;
-		buf[3] = 0xFF;
-		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 4);
-#else
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
-#endif
 		NVT_LOG("Enabled touch wakeup gesture\n");
 	} else {
-		disable_irq(ts->client->irq);
+		disable_irq_nosync(ts->client->irq);
 		/*---write i2c command to enter "deep sleep mode"---*/
 		buf[0] = EVENT_MAP_HOST_CMD;
 		buf[1] = 0x11;
@@ -1931,7 +1906,7 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 			if (ret < 0) {
 				NVT_ERR("Failed to select %s pinstate %d\n",
-					PINCTRL_STATE_ACTIVE, ret);
+					PINCTRL_STATE_SUSPEND, ret);
 			}
 		} else {
 			NVT_ERR("Failed to init pinctrl\n");
@@ -2034,7 +2009,6 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 				/*drm_dsi_ulps_enable(true);*/
 				/*drm_dsi_ulps_suspend_enable(true);*/
 			}
-			flush_workqueue(ts->event_wq);
 			nvt_ts_suspend(&ts->client->dev);
 		} else if (*blank == DRM_BLANK_UNBLANK) {
 			if (ts->gesture_enabled) {
@@ -2053,8 +2027,7 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 				/*drm_dsi_ulps_suspend_enable(false);*/
 				nvt_enable_reg(ts, false);
 			}
-			flush_workqueue(ts->event_wq);
-			queue_work(ts->event_wq, &ts->resume_work);
+			nvt_ts_resume(&ts->client->dev);
 		}
 	}
 

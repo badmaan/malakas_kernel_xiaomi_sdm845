@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 - 2017 Novatek, Inc.
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * $Revision: 21600 $
  * $Date: 2018-01-12 15:21:45 +0800 (週五, 12 一月 2018) $
@@ -16,7 +16,7 @@
  * more details.
  *
  */
-#ifndef	_LINUX_NVT_TOUCH_H
+#ifndef 	_LINUX_NVT_TOUCH_H
 #define		_LINUX_NVT_TOUCH_H
 
 #include <linux/i2c.h>
@@ -30,8 +30,8 @@
 #define PINCTRL_STATE_ACTIVE		"pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND		"pmx_ts_suspend"
 #define PINCTRL_STATE_RELEASE		"pmx_ts_release"
-
-#define NVT_DEBUG 1
+#define NVT_COORDS_ARR_SIZE 2
+#define NVT_DEBUG 0
 
 /*---GPIO number---*/
 #define NVTTOUCH_INT_PIN 943
@@ -101,7 +101,6 @@ struct nvt_config_info {
 struct nvt_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
-	struct work_struct nvt_work;
 	struct delayed_work nvt_fwu_work;
 	struct regulator *vddio_reg;
 	struct regulator *lab_reg;
@@ -155,11 +154,12 @@ struct nvt_ts_data {
 	size_t config_array_size;
 	int current_index;
 	bool dev_pm_suspend;
-	struct work_struct suspend_work;
+	struct completion dev_pm_suspend_completion;
 	struct work_struct resume_work;
 	struct workqueue_struct *event_wq;
-	struct completion dev_pm_suspend_completion;
 	struct pm_qos_request pm_qos_req;
+
+	struct proc_dir_entry *input_proc;
 };
 
 struct nvt_mode_switch {
@@ -169,7 +169,7 @@ struct nvt_mode_switch {
 };
 
 #if NVT_TOUCH_PROC
-struct nvt_flash_data{
+struct nvt_flash_data {
 	rwlock_t lock;
 	struct i2c_client *client;
 };
@@ -184,11 +184,11 @@ typedef enum {
 } RST_COMPLETE_STATE;
 
 typedef enum {
-    EVENT_MAP_HOST_CMD                      = 0x50,
-    EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE   = 0x51,
-    EVENT_MAP_RESET_COMPLETE                = 0x60,
-    EVENT_MAP_FWINFO                        = 0x78,
-    EVENT_MAP_PROJECTID                     = 0x9A,
+	EVENT_MAP_HOST_CMD                      = 0x50,
+	EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE   = 0x51,
+	EVENT_MAP_RESET_COMPLETE                = 0x60,
+	EVENT_MAP_FWINFO                        = 0x78,
+	EVENT_MAP_PROJECTID                     = 0x9A,
 } I2C_EVENT_MAP;
 
 /*---extern structures---*/
