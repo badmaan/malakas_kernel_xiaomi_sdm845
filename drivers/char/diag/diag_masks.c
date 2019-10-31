@@ -584,7 +584,7 @@ static int diag_cmd_get_ssid_range(unsigned char *src_buf, int src_len,
 	mutex_lock(&driver->md_session_lock);
 	info = diag_md_session_get_pid(pid);
 	mask_info = (!info) ? &msg_mask : info->msg_mask;
-	if (!src_buf || !dest_buf || dest_len <= 0 ||
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
 	    !mask_info) {
 		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
 		       __func__, src_buf, src_len, dest_buf, dest_len,
@@ -809,7 +809,6 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 		mutex_unlock(&driver->md_session_lock);
 		return -EINVAL;
 	}
-
 	msg_mask_tbl_count = (info) ? info->msg_mask_tbl_count :
 			driver->msg_mask_tbl_count;
 	for (i = 0; i < msg_mask_tbl_count; i++, mask++) {
@@ -2141,7 +2140,6 @@ int diag_copy_to_user_msg_mask(char __user *buf, size_t count,
 		mutex_unlock(&mask_info->lock);
 		return -EINVAL;
 	}
-
 	msg_mask_tbl_count = (info) ? info->msg_mask_tbl_count :
 			driver->msg_mask_tbl_count;
 	for (i = 0; i < msg_mask_tbl_count; i++, mask++) {
