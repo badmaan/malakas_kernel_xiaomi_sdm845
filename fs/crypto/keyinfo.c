@@ -301,6 +301,7 @@ static void put_master_key(struct fscrypt_master_key *mk)
 		return;
 	hash_del(&mk->mk_node);
 	spin_unlock(&fscrypt_master_keys_lock);
+
 	free_master_key(mk);
 }
 
@@ -589,6 +590,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
 	if (res)
 		goto out;
 
+	res = setup_crypto_transform(crypt_info, mode, raw_key, inode);
 	if (is_private_data_mode(crypt_info)) {
 		if (!fscrypt_is_ice_capable(inode->i_sb)) {
 			pr_warn("%s: ICE support not available\n",
@@ -606,6 +608,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
 		goto out;
 
 do_ice:
+	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
 	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
 		crypt_info = NULL;
 out:

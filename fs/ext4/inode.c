@@ -1156,6 +1156,7 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
 			ll_rw_block(REQ_OP_READ, (decrypt ? REQ_NOENCRYPT : 0),
 				    1, &bh);
 			*wait_bh++ = bh;
+			decrypt = IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode);
 		}
 	}
 	/*

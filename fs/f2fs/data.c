@@ -530,7 +530,7 @@ int f2fs_merge_page_bio(struct f2fs_io_info *fio)
 
 	if (!f2fs_is_valid_blkaddr(fio->sbi, fio->new_blkaddr,
 			__is_meta_io(fio) ? META_GENERIC : DATA_GENERIC))
-		return -EFAULT;
+		return -EFSCORRUPTED;
 
 	trace_f2fs_submit_page_bio(page, fio);
 	f2fs_trace_ios(fio, 0);
@@ -1647,8 +1647,6 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
 	sector_t last_block_in_file;
 	sector_t block_nr;
 	int ret = 0;
-	bool bio_encrypted;
-	u64 dun;
 
 	block_in_file = (sector_t)page_index(page);
 	last_block = block_in_file + nr_pages;
@@ -1713,13 +1711,6 @@ submit_and_realloc:
 		__submit_bio(F2FS_I_SB(inode), bio, DATA);
 		bio = NULL;
 	}
-
-	dun = PG_DUN(inode, page);
-	bio_encrypted = f2fs_may_encrypt_bio(inode, NULL);
-	if (!fscrypt_mergeable_bio(bio, dun, bio_encrypted, 0)) {
-		__submit_bio(F2FS_I_SB(inode), bio, DATA);
-		bio = NULL;
-	}
 	if (bio == NULL) {
 		bio = f2fs_grab_read_bio(inode, block_nr, nr_pages,
 				is_readahead ? REQ_RAHEAD : 0);
@@ -1728,8 +1719,6 @@ submit_and_realloc:
 			bio = NULL;
 			goto out;
 		}
-		if (bio_encrypted)
-			fscrypt_set_ice_dun(inode, bio, dun);
 	}
 
 	/*
