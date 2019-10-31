@@ -284,8 +284,10 @@ static const struct chan_attr uci_chan_attr_table[] = {
 		mhi_uci_generic_client_cb,
 		NULL,
 		NULL,
+		NULL,
 		false,
-		true,
+		false,
+		false,
 		50
 	},
 	{
