@@ -28,7 +28,7 @@ echo "20" > /proc/sys/fs/lease-break-time
 #echo 0 > /dev/stune/background/notify_on_release
 #echo 0 > /dev/stune/background/schedtune.boost
 #echo 0 > /dev/stune/background/schedtune.colocate
-echo 0 > /dev/stune/background/schedtune.prefer_idle
+#echo 0 > /dev/stune/background/schedtune.prefer_idle
 #echo 0 > /dev/stune/background/schedtune.sched_boost
 #echo 0 > /dev/stune/background/schedtune.sched_boost_enabled
 #echo 0 > /dev/stune/background/schedtune.sched_boost_no_override
@@ -85,10 +85,10 @@ echo 1 > /dev/stune/top-app/schedtune.sched_boost_enabled
 echo 1 > /proc/sys/kernel/sched_tunable_scaling
 #echo 1000000 > /proc/sys/kernel/sched_min_granularity_ns
 #echo 20000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
-echo 980000 > /proc/sys/kernel/sched_rt_runtime_us
+#echo 980000 > /proc/sys/kernel/sched_rt_runtime_us
 #echo 100000 > /proc/sys/kernel/sched_latency_ns
 
-echo "0" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
+#echo "0" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
 #echo '0:0' > /sys/module/cpu_boost/parameters/input_boost_freq
 echo '0:1324800' > /sys/module/cpu_boost/parameters/input_boost_freq
 echo 90 > /sys/module/cpu_boost/parameters/input_boost_ms
@@ -107,19 +107,19 @@ echo "0" > /dev/cpuset/restricted/cpus
 
 echo "0" > /sys/module/workqueue/parameters/power_efficient
 
-echo "1" > /sys/devices/system/cpu/cpu0/core_ctl/enable
+#echo "1" > /sys/devices/system/cpu/cpu0/core_ctl/enable
 echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 #echo 1209600 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq
-echo 100 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_load 
-echo 1 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/pl
+#echo 100 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_load 
+#echo 1 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/pl
 echo 1 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/iowait_boost_enable
 
 
-echo "1" > /sys/devices/system/cpu/cpu4/core_ctl/enable
+#echo "1" > /sys/devices/system/cpu/cpu4/core_ctl/enable
 echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy4/scaling_governor
 #echo 1574400 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq
-echo 100 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_load 
-echo 1 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/pl
+#echo 100 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_load 
+#echo 1 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/pl
 echo 1 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/iowait_boost_enable
 
 #echo 1 > /proc/sys/kernel/sched_walt_rotate_big_tasks
@@ -172,7 +172,7 @@ echo "N" > /sys/module/lpm_levels/parameters/sleep_disabled
 ######################## 
 #echo "25000" > /sys/power/pm_freeze_timeout
 echo "CACHE_HOT_BUDDY" > /sys/kernel/debug/sched_features
-#echo "ENERGY_AWARE" > /sys/kernel/debug/sched_features
+echo "ENERGY_AWARE" > /sys/kernel/debug/sched_features
 echo "FBT_STRICT_ORDER" > /sys/kernel/debug/sched_features
 echo "LAST_BUDDY" > /sys/kernel/debug/sched_features
 echo "NEXT_BUDDY" > /sys/kernel/debug/sched_features
@@ -291,7 +291,7 @@ echo 300 > /sys/block/sda/queue/iosched/target_latency
 chmod 0644 /sys/class/misc/boeffla_wakelock_blocker/wakelock_blocker
 echo "898000.qcom,qup_uart;IPA_WS;NETLINK;[timerfd];c440000.qcom,spmi:qcom,pmi8998@2:qcom,qpnp-smb2;enable_ipa_ws;enable_netlink_ws;enable_netmgr_wl_ws;enable_qcom_rx_wakelock_ws;enable_timerfd_ws;enable_wlan_etscan_wl_ws;enable_wlan_wow_wl_ws;enable_wlan_ws;hal_bluetooth_lock;netmgr_wl;qcom_rx_wakelock;sensor_ind;wcnss_filtr_lock;wlan;wlan_extscan_wl;wlan_ipa;wlan_pno_wl;wlan_wow_wl" > /sys/class/misc/boeffla_wakelock_blocker/wakelock_blocker 
 
-settings put global device_idle_constants light_after_inactive_to=5000,light_pre_idle_to=10000,light_max_idle_to=86400000,light_idle_to=43200000,light_idle_maintenance_max_budget=20000,light_idle_maintenance_min_budget=5000,min_time_to_alarm=60000,inactive_to=120000,motion_inactive_to=120000,idle_after_inactive_to=5000,locating_to=2000,sensing_to=120000,idle_to=7200000,wait_for_unlock=true
+#settings put global device_idle_constants light_after_inactive_to=5000,light_pre_idle_to=10000,light_max_idle_to=86400000,light_idle_to=43200000,light_idle_maintenance_max_budget=20000,light_idle_maintenance_min_budget=5000,min_time_to_alarm=60000,inactive_to=120000,motion_inactive_to=120000,idle_after_inactive_to=5000,locating_to=2000,sensing_to=120000,idle_to=7200000,wait_for_unlock=true
 
 for i in $(find /sys/class/net -type l); do
   echo "128" > $i/tx_queue_len;
@@ -421,53 +421,53 @@ for i in $(find /sys/ -name snapshot_crashdumper); do
 done
 
 ########################
-echo userspace > /sys/class/devfreq/soc:qcom,l3-cdsp/governor
-for cpubw in /sys/class/devfreq/*qcom,cpubw*
-do
-    echo "bw_hwmon" > $cpubw/governor
-    echo 50 > $cpubw/polling_interval
-    echo "2288 4577 6500 8132 9155 10681" > $cpubw/bw_hwmon/mbps_zones
-    echo 4 > $cpubw/bw_hwmon/sample_ms
-    echo 50 > $cpubw/bw_hwmon/io_percent
-    echo 20 > $cpubw/bw_hwmon/hist_memory
-    echo 10 > $cpubw/bw_hwmon/hyst_length
-    echo 0 > $cpubw/bw_hwmon/guard_band_mbps
-    echo 250 > $cpubw/bw_hwmon/up_scale
-    echo 1600 > $cpubw/bw_hwmon/idle_mbps
-done
-for llccbw in /sys/class/devfreq/*qcom,llccbw*
-do
-    echo "bw_hwmon" > $llccbw/governor
-    echo 50 > $llccbw/polling_interval
-    echo "1720 2929 3879 5931 6881" > $llccbw/bw_hwmon/mbps_zones
-    echo 4 > $llccbw/bw_hwmon/sample_ms
-    echo 80 > $llccbw/bw_hwmon/io_percent
-    echo 20 > $llccbw/bw_hwmon/hist_memory
-    echo 10 > $llccbw/bw_hwmon/hyst_length
-    echo 0 > $llccbw/bw_hwmon/guard_band_mbps
-    echo 250 > $llccbw/bw_hwmon/up_scale
-    echo 1600 > $llccbw/bw_hwmon/idle_mbps
-done
-for memlat in /sys/class/devfreq/*qcom,memlat-cpu*
-do
-    echo "mem_latency" > $memlat/governor
-    echo 10 > $memlat/polling_interval
-    echo 400 > $memlat/mem_latency/ratio_ceil
-done
-for memlat in /sys/class/devfreq/*qcom,l3-cpu*
-do
-    echo "mem_latency" > $memlat/governor
-    echo 10 > $memlat/polling_interval
-    echo 400 > $memlat/mem_latency/ratio_ceil
-done
-for l3cdsp in /sys/class/devfreq/*qcom,l3-cdsp*
-do
-    echo "userspace" > $l3cdsp/governor
-    chown -h system $l3cdsp/userspace/set_freq
-done
-echo 4000 > /sys/class/devfreq/soc:qcom,l3-cpu4/mem_latency/ratio_ceil
-echo "compute" > /sys/class/devfreq/soc:qcom,mincpubw/governor
-echo 10 > /sys/class/devfreq/soc:qcom,mincpubw/polling_interval
+#echo userspace > /sys/class/devfreq/soc:qcom,l3-cdsp/governor
+#for cpubw in /sys/class/devfreq/*qcom,cpubw*
+#do
+#    echo "bw_hwmon" > $cpubw/governor
+#    echo 50 > $cpubw/polling_interval
+#    echo "2288 4577 6500 8132 9155 10681" > $cpubw/bw_hwmon/mbps_zones
+#    echo 4 > $cpubw/bw_hwmon/sample_ms
+#    echo 50 > $cpubw/bw_hwmon/io_percent
+#    echo 20 > $cpubw/bw_hwmon/hist_memory
+#    echo 10 > $cpubw/bw_hwmon/hyst_length
+#    echo 0 > $cpubw/bw_hwmon/guard_band_mbps
+#    echo 250 > $cpubw/bw_hwmon/up_scale
+#    echo 1600 > $cpubw/bw_hwmon/idle_mbps
+#done
+#for llccbw in /sys/class/devfreq/*qcom,llccbw*
+#do
+#    echo "bw_hwmon" > $llccbw/governor
+#    echo 50 > $llccbw/polling_interval
+#    echo "1720 2929 3879 5931 6881" > $llccbw/bw_hwmon/mbps_zones
+#    echo 4 > $llccbw/bw_hwmon/sample_ms
+#    echo 80 > $llccbw/bw_hwmon/io_percent
+#    echo 20 > $llccbw/bw_hwmon/hist_memory
+#    echo 10 > $llccbw/bw_hwmon/hyst_length
+#    echo 0 > $llccbw/bw_hwmon/guard_band_mbps
+#    echo 250 > $llccbw/bw_hwmon/up_scale
+#    echo 1600 > $llccbw/bw_hwmon/idle_mbps
+#done
+#for memlat in /sys/class/devfreq/*qcom,memlat-cpu*
+#do
+#    echo "mem_latency" > $memlat/governor
+#    echo 10 > $memlat/polling_interval
+#    echo 400 > $memlat/mem_latency/ratio_ceil
+#done
+#for memlat in /sys/class/devfreq/*qcom,l3-cpu*
+#do
+#    echo "mem_latency" > $memlat/governor
+#    echo 10 > $memlat/polling_interval
+#    echo 400 > $memlat/mem_latency/ratio_ceil
+#done
+#for l3cdsp in /sys/class/devfreq/*qcom,l3-cdsp*
+#do
+#    echo "userspace" > $l3cdsp/governor
+#    chown -h system $l3cdsp/userspace/set_freq
+#done
+#echo 4000 > /sys/class/devfreq/soc:qcom,l3-cpu4/mem_latency/ratio_ceil
+#echo "compute" > /sys/class/devfreq/soc:qcom,mincpubw/governor
+#echo 10 > /sys/class/devfreq/soc:qcom,mincpubw/polling_interval
 
 echo "Y" > /sys/kernel/debug/dsi-panel-ebbg-fhd-ft8716-video_display/dsi-phy-0_allow_phy_power_off
 echo "Y" > /sys/kernel/debug/dsi-panel-ebbg-fhd-ft8716-video_display/ulps_enable
