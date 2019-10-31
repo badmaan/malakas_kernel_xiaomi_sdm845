@@ -347,7 +347,7 @@ static irqreturn_t qpnp_tm_isr(int irq, void *data)
 {
 	struct qpnp_tm_chip *chip = data;
 
-	schedule_delayed_work(&chip->irq_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->irq_work,
 			msecs_to_jiffies(STATUS_REGISTER_DELAY_MS) + 1);
 
 	return IRQ_HANDLED;
@@ -403,7 +403,7 @@ static int qpnp_tm_probe(struct platform_device *pdev)
 	int rc = 0;
 	u8 raw_type[2], type, subtype;
 
-	if (!pdev || !(&pdev->dev) || !pdev->dev.of_node) {
+	if (!pdev || !pdev->dev.of_node) {
 		dev_err(&pdev->dev, "%s: device tree node not found\n",
 			__func__);
 		return -EINVAL;

@@ -2,7 +2,6 @@
  *  thermal_core.h
  *
  *  Copyright (C) 2012  Intel Corp
- *  Copyright (C) 2018 XiaoMi, Inc.
  *  Author: Durgadoss R <durgadoss.r@intel.com>
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
