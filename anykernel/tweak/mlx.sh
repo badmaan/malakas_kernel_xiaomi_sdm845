@@ -82,7 +82,7 @@ echo 1 > /dev/stune/top-app/schedtune.sched_boost_enabled
 
 #echo 0 > /proc/sys/kernel/sched_boost
 #echo 1 > /proc/sys/kernel/sched_child_runs_first 
-echo 1 > /proc/sys/kernel/sched_tunable_scaling
+#echo 1 > /proc/sys/kernel/sched_tunable_scaling
 #echo 1000000 > /proc/sys/kernel/sched_min_granularity_ns
 #echo 20000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
 #echo 980000 > /proc/sys/kernel/sched_rt_runtime_us
@@ -91,7 +91,7 @@ echo 1 > /proc/sys/kernel/sched_tunable_scaling
 #echo "0" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
 #echo '0:0' > /sys/module/cpu_boost/parameters/input_boost_freq
 echo '0:1324800' > /sys/module/cpu_boost/parameters/input_boost_freq
-echo 90 > /sys/module/cpu_boost/parameters/input_boost_ms
+echo 40 > /sys/module/cpu_boost/parameters/input_boost_ms
 #echo 0 > /sys/module/cpu_boost/parameters/powerkey_input_boost_freq
 echo 1200 > /sys/module/cpu_boost/parameters/powerkey_input_boost_ms
 #echo 0 > /sys/module/cpu_boost/parameters/sched_boost_on_input
@@ -214,8 +214,8 @@ echo "64" > /sys/class/drm/card0/device/idle_timeout_ms
 #echo "10" > /proc/sys/vm/swappiness
 #echo "10" > /proc/sys/vm/vfs_cache_pressure
 
-echo "128" > /proc/sys/kernel/random/read_wakeup_threshold 
-echo "96" > /proc/sys/kernel/random/urandom_min_reseed_secs 
+#echo "128" > /proc/sys/kernel/random/read_wakeup_threshold 
+#echo "96" > /proc/sys/kernel/random/urandom_min_reseed_secs 
 #echo "1024" > /proc/sys/kernel/random/write_wakeup_threshold 
 
 #chmod 666 /sys/module/lowmemorykiller/parameters/minfree
