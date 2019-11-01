@@ -609,7 +609,6 @@ int fscrypt_get_encryption_info(struct inode *inode)
 
 do_ice:
 	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
-	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
 		crypt_info = NULL;
 out:
 	if (res == -ENOKEY)
