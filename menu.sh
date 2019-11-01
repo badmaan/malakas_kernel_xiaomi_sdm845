@@ -11,14 +11,9 @@ DEFCONFIG=malakas_beryllium_defconfig
 export ARCH=arm64 && export SUBARCH=arm64 $DEFCONFIG
 make $DEFCONFIG
 make menuconfig
-mv .config arch/arm64/configs/malakas_beryllium_defconfig2
+cp .config arch/arm64/configs/malakas_beryllium_defconfig
 clear
-if [ -e arch/arm64/configs/malakas_beryllium_defconfig2 ]; then
-echo -e "${green}"
-echo config regenerated
-echo -e "${restore}"
-else
 echo -e "${green}"
 echo done
 echo -e "${restore}"
-fi;
+
