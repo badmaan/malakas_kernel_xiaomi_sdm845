@@ -20,7 +20,7 @@ export KBUILD_BUILD_HOST=MLX
 
 ###setup
 MLX=~/GIT/malakas_kernel_xiaomi_sdm845
-AK=$MLX/anykernel
+AK=$MLX/AnyKernel3
 OUT=$MLX/out/arch/arm64/boot
 KERNEL=~/Desktop/MLX
 TC=~/TOOLCHAIN
