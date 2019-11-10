@@ -335,3 +335,5 @@ rm -rf /tmp/arter97
 sync
 
 ui_print " " " " "Done!";
+
+ui_print "emo's are kangers";
